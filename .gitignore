@@ -1,0 +1,25 @@
+# 后端 Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+
+# 前端 Node
+node_modules/
+.expo/
+dist/
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 媒体文件（可选，大文件可以不同步）
+server/media/*
+!server/media/.gitkeep

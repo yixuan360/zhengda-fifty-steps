@@ -1,0 +1,14 @@
+# 郑大五十步 — Python 依赖
+# 对齐 v4.0 §4.2
+
+Django>=4.2,<7.0
+djangorestframework>=3.15
+django-cors-headers>=4.0
+djangorestframework-simplejwt>=5.3
+mysqlclient>=2.2
+python-decouple>=3.8
+gunicorn>=23.0
+
+# 测试
+pytest>=8.0
+pytest-django>=4.0
