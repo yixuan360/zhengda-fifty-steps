@@ -14,11 +14,14 @@ interface AuthState {
   user: UserInfo | null;
   /** 是否已登录 */
   isLoggedIn: boolean;
+  /** 游客模式标识（演示时强制 true，跳过微信登录） */
+  isVisitorMode: boolean;
 
   // Actions
   setTokens: (access: string, refresh: string) => void;
   setUser: (user: UserInfo) => void;
   logout: () => void;
+  setVisitorMode: (v: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -26,6 +29,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   user: null,
   isLoggedIn: false,
+  isVisitorMode: true,
 
   setTokens: (access, refresh) =>
     set({ accessToken: access, refreshToken: refresh, isLoggedIn: true }),
@@ -39,4 +43,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       isLoggedIn: false,
     }),
+
+  setVisitorMode: (v) => set({ isVisitorMode: v }),
 }));

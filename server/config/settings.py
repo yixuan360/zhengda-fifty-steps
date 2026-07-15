@@ -16,7 +16,7 @@ DEBUG = env_config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = env_config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,10.0.2.2',
+    default='localhost,127.0.0.1,10.0.2.2,testserver',
     cast=lambda v: [s.strip() for s in v.split(',')],
 )
 
@@ -97,6 +97,9 @@ TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True
 USE_TZ = True
 
+# ── 测试标记（pytest conftest 中设为 True，允许 Mock 接口在测试中运行） ──
+TESTING = False
+
 # ── 静态资源 ─────────────────────────────────────────
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -125,7 +128,13 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',         # V1 默认开放，需要鉴权的 View 单独设置
     ),
     'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
+        'djangorestframework_camel_case.render.CamelCaseJSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'djangorestframework_camel_case.parser.CamelCaseJSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
     ),
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
@@ -135,8 +144,7 @@ from datetime import timedelta
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),        # 7 天，对齐 v4.0 §9.2
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),      # 30 天
-    'ROTATE_REFRESH_TOKENS': True,
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),      # 30 天，不轮换
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
@@ -148,3 +156,17 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # ── Admin 安全 ───────────────────────────────────────
 # 修改 Admin 路径（v4.0 §4.3），非默认值
 ADMIN_URL = env_config('ADMIN_URL', default='manage/')
+
+# ── 生产安全（DEBUG=False 时自动启用）───────────────
+# 部署到 ECS + Nginx 后，以下配置自动生效
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Django 4.2+ 要求：通过 HTTPS 访问 Admin 时必须配置
+CSRF_TRUSTED_ORIGINS = env_config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='',
+    cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
+)

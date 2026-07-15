@@ -12,6 +12,19 @@ dist/
 .env.local
 .env.*.local
 
+# Android 原生构建产物
+android/
+*.apk
+*.aab
+
+# EAS 构建输出
+eas-build/
+*.tar.gz
+
+# 用户敏感文件
+*.keystore
+*.jks
+
 # IDE
 .vscode/
 .idea/

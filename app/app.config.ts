@@ -7,15 +7,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: '郑大五十步',
   slug: 'zhengda-fifty-steps',
+  owner: 'arony',
   version: '1.0.0',
+  extra: {
+    eas: {
+      projectId: '24ed8f97-073a-4539-bea9-f54db4bc4363',
+    },
+  },
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
   scheme: 'zhengda',
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: 'com.zhengda.fiftysteps',
-  },
   android: {
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
@@ -29,10 +31,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'ACCESS_COARSE_LOCATION',
       'FOREGROUND_SERVICE',
       'FOREGROUND_SERVICE_LOCATION',
+      // 🔴#3: Android 14+ RNTP 必需权限
+      'FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+      'POST_NOTIFICATIONS',
+      'WAKE_LOCK',
     ],
   },
   plugins: [
     'expo-router',
+    'expo-sqlite',
     [
       'expo-location',
       {

@@ -1,15 +1,17 @@
 """
 景点管理 — Spot 模型（v4.0 §8.1 / §4.3 / §10.1）
-V1 单表设计：image / audio 直接存表中，通过 FileField 支持 Admin 上传。
+V1 单表设计：image / audio 直接存表中，通过 ImageField/FileField 支持 Admin 上传。
 """
+import uuid
 from django.db import models
 
 
 def _spot_upload_path(instance, filename, folder):
-    """生成上传路径：media/<folder>/<spot_id>_<timestamp>.<ext>"""
+    """生成上传路径：media/<folder>/<spot_id>_<timestamp>_<uuid>.<ext>"""
     import time
     ext = filename.split('.')[-1] if '.' in filename else 'bin'
-    return f'{folder}/{instance.id}_{int(time.time())}.{ext}'
+    uid = uuid.uuid4().hex[:6]
+    return f'{folder}/{instance.id}_{int(time.time())}_{uid}.{ext}'
 
 
 def image_upload_path(instance, filename):
@@ -29,7 +31,7 @@ class Spot(models.Model):
     trigger_radius = models.IntegerField('触发半径（米）', default=50)
     summary = models.TextField('摘要', blank=True, default='')
     description = models.TextField('详细介绍')
-    image = models.FileField('景点图片', upload_to=image_upload_path, max_length=500, blank=True)
+    image = models.ImageField('景点图片', upload_to=image_upload_path, max_length=500, blank=True)
     audio = models.FileField('音频文件', upload_to=audio_upload_path, max_length=500, blank=True)
     is_active = models.BooleanField('启用', default=True)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
@@ -53,3 +55,13 @@ class Spot(models.Model):
     def audio_url(self):
         """返回音频相对 URL，用于 API 序列化"""
         return self.audio.url if self.audio else ''
+
+    @property
+    def has_image(self):
+        """判断是否有图片上传"""
+        return bool(self.image and self.image.name)
+
+    @property
+    def has_audio(self):
+        """判断是否有音频上传"""
+        return bool(self.audio and self.audio.name)

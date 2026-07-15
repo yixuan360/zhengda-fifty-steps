@@ -5,82 +5,54 @@
 
 ---
 
-## Session: 2026-07-14（Day 0 — 架构基线确认 + 脚手架初始化）
+## Session: 2026-07-14（Day 0-1 — 架构确认 + 脚手架 + P0 验证）
 
 ### Phase 1: 架构基线确认与任务拆解
 - **Status:** complete
-- **Started:** 2026-07-14 15:30
-- **Completed:** 2026-07-14 16:00
-- Actions taken:
-  - 完整读取《郑大五十步-架构设计文档-v4.0（极简务实版）》（600 行）
-  - 确认项目目录结构：app/（空）、server/（空）、docs/（架构文档已存在）
-  - 识别所有架构约束：18 项已移除的过度设计、单表模型、全量同步、无 Service 层等
-  - 将原文档 10 天计划压缩为 6 天紧凑版
-  - 产出完整的 Day1-Day6 任务拆解表（含预估耗时、依赖关系、验收标准）
-  - 产出 P0 验证清单（4 项 + 应急方案）
-  - 确定前后端接口契约（4 个 API、统一响应格式、camelCase 字段命名）
-  - 创建三个规划文件：task_plan.md / findings.md / progress.md
-- Files created/modified:
-  - `task_plan.md` (created)
-  - `findings.md` (created)
-  - `progress.md` (created)
+- Actions: 架构文档完整阅读 / 6 天任务拆解 / P0 清单 / 接口契约
+- Files: task_plan.md / findings.md / progress.md
 
-### Phase 2-脚手架: 前后端项目初始化
-- **Status:** complete（MySQL 建库除外 — 需用户提供密码）
-- **Started:** 2026-07-14 16:00
-- **Completed:** 2026-07-14 16:20
+### Phase 2: 脚手架 + P0 验证
+- **Status:** complete
+- Actions:
+  - 后端: Django + DRF + MySQL + 3 apps + 21 migrations + 超级用户
+  - 前端: Expo SDK 57 + Router + 3 stores + types + coordinate.ts
+  - 代码审核 8 项整改全部关闭
+  - P0-1~P0-4 全部通过
+- Key files: server/ (40+ files), app/ (20+ files)
+
+---
+
+## Session: 2026-07-15（Day 2 — 前端存储层 + 同步层 + 地图集成）
+
+### Phase 3: 存储层 + 同步层 + UI 串联
+- **Status:** complete
+- **Started:** 2026-07-15 16:00
+- **Completed:** 2026-07-15 16:35
+
 - Actions taken:
-  - 后端：安装全部 Python 依赖（DRF 3.17 / simplejwt 5.5 / mysqlclient 2.2 / gunicorn 26 等 14 个包）
-  - 后端：创建 Django 项目核心文件（manage.py / settings.py / urls.py / wsgi.py / exceptions.py）
-  - 后端：创建 3 个 apps（spots / accounts / config），含 models / views / serializers / admin / urls
-  - 后端：Serializer 层实现 snake_case → camelCase 转换（对齐接口契约）
-  - 后端：配置统一异常处理（ApiResponse 格式）
-  - 后端：.env + .env.example + requirements.txt
-  - 后端：`python manage.py check` 通过（0 issues）
-  - 前端：npm install 590 packages（Expo SDK 57 + Router + Location + SQLite + RNTP + 地图 + Zustand + Axios 等）
-  - 前端：TypeScript 编译通过（`npx tsc --noEmit` 0 errors）
-  - 前端：Expo config 验证通过（SDK 57.0.0，插件生效，权限声明正确）
-  - 前端：创建 Expo Router 5 个页面入口（_layout / tabs / map / list / spot/[id]）
-  - 前端：创建 3 个 Zustand stores（tourStore / audioStore / authStore）
-  - 前端：创建完整类型定义（ApiResponse / Spot / UserInfo / AuthData 等）
-  - 前端：.env + .env.example
-  - 未完成：MySQL zhengda 数据库创建 + Django migrate（需 root 密码）
+  - 创建 services/database.ts: SQLite 初始化 + spots/config/play_history 三表 + CRUD
+  - 创建 services/api.ts: Axios 实例 + Token 拦截器 + 401 自动刷新队列
+  - 创建 services/sync.ts: 全量同步 + isSyncing 并发保护 + 失败静默兜底
+  - 创建 utils/distance.ts: Haversine 公式
+  - 创建 components/SpotCard.tsx: 缩略图 + 名称 + 摘要 + 距离
+  - 重写 list.tsx: FlatList + pull-to-refresh + 距离排序
+  - 重写 spot/[id].tsx: 从 SQLite 加载 + 图片 + 描述
+  - 重写 map.tsx: 高德地图 + GPS 蓝点 + 景点 Marker + 启动同步
+  - 类型清理: Spot 移除 createdAt（对齐 serializer）
+  - 验证: tsc 0 errors + Django check 0 issues + API 端点 smoke ✅
+
 - Files created/modified:
-  - `server/manage.py` (created)
-  - `server/config/settings.py` (created)
-  - `server/config/urls.py` (created)
-  - `server/config/wsgi.py` (created)
-  - `server/config/exceptions.py` (created)
-  - `server/apps/spots/models.py` (created)
-  - `server/apps/spots/serializers.py` (created)
-  - `server/apps/spots/views.py` (created)
-  - `server/apps/spots/admin.py` (created)
-  - `server/apps/spots/urls.py` (created)
-  - `server/apps/accounts/models.py` (created)
-  - `server/apps/accounts/serializers.py` (created)
-  - `server/apps/accounts/views.py` (created)
-  - `server/apps/accounts/urls.py` (created)
-  - `server/apps/config/models.py` (created)
-  - `server/apps/config/views.py` (created)
-  - `server/apps/config/admin.py` (created)
-  - `server/apps/config/urls.py` (created)
-  - `server/requirements.txt` (created)
-  - `server/.env` (created)
-  - `server/.env.example` (created)
-  - `app/package.json` (created)
-  - `app/tsconfig.json` (created)
-  - `app/app.json` (created)
-  - `app/.env` (created)
-  - `app/.env.example` (created)
-  - `app/app/_layout.tsx` (created)
-  - `app/app/(tabs)/_layout.tsx` (created)
-  - `app/app/(tabs)/map.tsx` (created)
-  - `app/app/(tabs)/list.tsx` (created)
-  - `app/app/spot/[id].tsx` (created)
-  - `app/types/index.ts` (created)
-  - `app/stores/tourStore.ts` (created)
-  - `app/stores/audioStore.ts` (created)
-  - `app/stores/authStore.ts` (created)
+  - `app/services/database.ts` (created) — SQLite 层
+  - `app/services/api.ts` (created) — Axios 层
+  - `app/services/sync.ts` (created) — 同步层
+  - `app/utils/distance.ts` (created) — Haversine
+  - `app/components/SpotCard.tsx` (created)
+  - `app/app/(tabs)/list.tsx` (rewritten) — 数据串联
+  - `app/app/spot/[id].tsx` (rewritten) — 数据串联
+  - `app/app/(tabs)/map.tsx` (rewritten) — 地图 + 同步
+  - `app/types/index.ts` (modified) — 移除 createdAt
+  - `task_plan.md` / `findings.md` / `progress.md` (updated)
 
 ---
 
@@ -88,9 +60,12 @@
 
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
-| Django check | `python manage.py check` | 0 issues | System check identified no issues (0 silenced) | ✅ |
-| TypeScript 编译 | `npx tsc --noEmit` | 0 errors | (no output) | ✅ |
-| Expo config | `npx expo config` | Valid config | SDK 57.0.0, plugins loaded, permissions correct | ✅ |
+| Django check | `manage.py check` | 0 issues | 0 silenced | ✅ |
+| Django migrate | `manage.py migrate` | all applied | 21/21 | ✅ |
+| GET /api/v1/spots/ | curl | `{ok, data:{spots,totalCount}}` | `{ok:true, data:{spots:[],totalCount:0}}` | ✅ |
+| GET /api/v1/config/ | curl | `{ok, data:{}}` | `{ok:true, data:{}}` | ✅ |
+| Expo tsc | `npx tsc --noEmit` | 0 errors | (no output) | ✅ |
+| Expo config | `npx expo config` | valid | SDK 57.0.0, plugins loaded | ✅ |
 
 ---
 
@@ -98,7 +73,10 @@
 
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
-| 2026-07-14 15:45 | MySQL `Access denied for user 'root'@'localhost'` | 1 | 需要 root 密码；记录为待处理项，可通过 .env 设置 DB_PASSWORD |
+| 2026-07-14 15:45 | MySQL Access denied root@localhost | 1 | .env DB_PASSWORD=123456 |
+| 2026-07-14 16:05 | django_admin_log already exists | 1 | migrate --fake-initial |
+| 2026-07-14 16:20 | AUTH_USER_MODEL before accounts migration | 1 | makemigrations accounts first |
+| 2026-07-15 16:30 | TS2739 LatLng vs {latitude,longitude} | 1 | 转换 coordinate={{latitude: lat, longitude: lng}} |
 
 ---
 
@@ -106,11 +84,27 @@
 
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 2 脚手架完成，MySQL 建库待补，下一步：Day2 后端 API + 前端地图与存储 |
-| Where am I going? | Phase 3-7: Day2 → Day6 逐日推进 |
-| What's the goal? | 6 天交付「郑大五十步」V1：App + Django API + Admin |
-| What have I learned? | SDK 57 是最新版本，满足"52+"约束；Django 6.0.7 安装但 check 兼容；所有依赖安装成功 |
-| What have I done? | 后端 Django 项目完整搭建（check 通过）+ 前端 Expo SDK 57 完整搭建（tsc 无错误） |
+| Where am I? | Phase 3 (Day2) 完成，进入 Phase 4 (Day3: 导览引擎 + 音频) |
+| Where am I going? | Phase 4-7: Day3→Day6，明日核心：useTour 导览引擎 |
+| What's the goal? | 6 天交付，当前进度超前半天 |
+| What have I learned? | 全部 API 输出对齐 v4.0；SQLite+Axios+sync 三层已就绪 |
+| What have I done? | Day2 全部完成：4 个 service/utils + 3 个页面 + SpotCard 组件 |
+
+---
+
+## 当前进度 vs 计划
+
+| 计划 | 状态 | 完成日期 |
+|------|:--:|------|
+| Phase 1: 架构确认 + 任务拆解 | ✅ | 07-14 |
+| Phase 2: Day1 脚手架 + P0 | ✅ | 07-14~15 |
+| Phase 3: Day2 存储 + 同步 + UI | ✅ | 07-15 |
+| Phase 4: Day3 导览引擎 + 音频 | ⏳ | 待开始 |
+| Phase 5: Day4 列表/详情 + Admin | ⏳ | — |
+| Phase 6: Day5 全链路联调 | ⏳ | — |
+| Phase 7: Day6 缓冲 + 交付 | ⏳ | — |
+
+> **结论：进度超前约 0.5 天。** 后端三大 app 在脚手架阶段已一并完成，Day2 后端零工作量，前端存储/同步/UI 层一天内全部串联完毕。
 
 ---
 

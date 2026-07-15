@@ -13,6 +13,16 @@ class SpotSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def to_representation(self, instance):
+        request = self.context.get('request')
+        image_url = instance.image_url or ''
+        audio_url = instance.audio_url or ''
+
+        # 🟡#1: FileField.url 是相对路径，客户端需要完整 URL
+        if image_url and request:
+            image_url = request.build_absolute_uri(image_url)
+        if audio_url and request:
+            audio_url = request.build_absolute_uri(audio_url)
+
         return {
             'id': instance.id,
             'name': instance.name,
@@ -21,8 +31,8 @@ class SpotSerializer(serializers.ModelSerializer):
             'triggerRadius': instance.trigger_radius,
             'summary': instance.summary,
             'description': instance.description,
-            'imageUrl': instance.image_url,
-            'audioUrl': instance.audio_url,
+            'imageUrl': image_url,
+            'audioUrl': audio_url,
             'isActive': instance.is_active,
             'updatedAt': int(instance.updated_at.timestamp() * 1000) if instance.updated_at else None,
         }

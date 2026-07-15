@@ -6,9 +6,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
+# 🟢#10: 归一化 ADMIN_URL 斜杠
+_admin_path = settings.ADMIN_URL.strip('/') + '/'
+
 urlpatterns = [
     # Admin 后台（路径非默认值，安全加固）
-    path(f'{settings.ADMIN_URL}', admin.site.urls),
+    path(_admin_path, admin.site.urls),
 
     # API v1
     path('api/v1/spots/', include('apps.spots.urls')),

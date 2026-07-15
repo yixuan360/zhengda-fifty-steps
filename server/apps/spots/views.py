@@ -16,7 +16,7 @@ class SpotListView(APIView):
 
     def get(self, request):
         spots = Spot.objects.all().order_by('id')
-        serializer = SpotSerializer(spots, many=True)
+        serializer = SpotSerializer(spots, many=True, context={'request': request})
         return Response({
             'ok': True,
             'data': {

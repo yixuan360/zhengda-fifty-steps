@@ -106,6 +106,19 @@ App 启动
 | MySQL root 拒绝无密码连接 | root 设置了密码，需通过 .env 设置 DB_PASSWORD 后 migrate |
 | create-expo-app 拒绝覆盖已有目录 | 临时目录创建 → 迁移 config 文件 → 删除临时目录 |
 | Expo SDK 版本偏离（52 → 57） | 最新稳定版满足"52+"约束，已记录为架构决策 |
+| 12 个依赖包版本与 Expo 57 不兼容导致 `undefined is not a function` | `npx expo install --fix` + 手动补充 expo-sqlite 插件，全部对齐 57.x |
+| 缺少 `app/index.tsx` 根路由 + `main` 字段指向不存在的 `index.ts` | 创建根路由 Redirect → `/(tabs)/map-test`；`main` 改为 `expo-router/entry` |
+
+---
+
+## P0 验证结果（全部通过）
+
+| # | 验证项 | 结果 | 日期 | 备注 |
+|---|--------|:--:|------|------|
+| P0-1 | 地图视图层级遮挡 | PASS | 2026-07-14 | react-native-maps 悬浮按钮可见可交互，zIndex 生效 |
+| P0-2 | 坐标系统一 | PASS | 2026-07-15 | WGS-84→GCJ-02 偏移正常，高德蓝点与道路对齐 |
+| P0-3 | 定位精度 | PASS | 2026-07-15 | 精确模式 accuracy < 20m 稳定获取 |
+| P0-4 | 音频后台播放 | PASS | 2026-07-15 | RNTP 锁屏持续播放 > 10min，通知栏正常 |
 
 ---
 
@@ -119,7 +132,7 @@ App 启动
 ### 技术文档参考
 - Django 4.2 LTS: https://docs.djangoproject.com/en/4.2/
 - Django REST Framework: https://www.django-rest-framework.org/
-- Expo SDK 52: https://docs.expo.dev/
+- Expo SDK 57: https://docs.expo.dev/versions/v57.0.0/
 - react-native-maps: https://github.com/react-native-maps/react-native-maps
 - react-native-track-player: https://rntp.dev/
 - Expo Router: https://docs.expo.dev/router/introduction/
@@ -134,7 +147,7 @@ App 启动
 
 ## Visual/Browser Findings
 
-暂无（项目初始化阶段，尚未运行任何界面或浏览器操作）
+暂无
 
 ---
 

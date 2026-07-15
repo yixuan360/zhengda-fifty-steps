@@ -22,8 +22,7 @@ export interface Spot {
   imageUrl: string;
   audioUrl: string;
   isActive: boolean;
-  createdAt: number; // 毫秒 Unix 时间戳
-  updatedAt: number;
+  updatedAt: number;   // 毫秒 Unix 时间戳
 }
 
 /** 景点列表响应 */

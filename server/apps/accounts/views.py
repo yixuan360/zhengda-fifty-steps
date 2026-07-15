@@ -1,13 +1,45 @@
 """
 用户认证 — View（v4.0 §7.2）
-微信登录 + Token 刷新。
+微信登录 + Mock 登录 + Token 刷新。
 """
+from django.conf import settings
+from django.http import Http404
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import WechatLoginSerializer, UserSerializer
+
+
+class MockLoginView(APIView):
+    """
+    POST /api/v1/auth/login/mock/ — Mock 登录（v4.0 §9.3 游客模式）
+    不依赖微信 code2Session，直接返回固定 Mock 用户的 JWT。
+    仅 DEBUG=True 时可用，生产环境返回 404。
+    """
+    permission_classes = []
+
+    def post(self, request):
+        # 🟡#5: 生产环境屏蔽 mock 接口（Django 测试 runner 设 DEBUG=False，
+        # 但同时 TEMPLATE_DEBUG 也被覆盖。用 TESTING 标记区分真实生产与测试环境）
+        if not settings.DEBUG and not getattr(settings, 'TESTING', False):
+            raise Http404
+
+        user, _ = User.objects.get_or_create(
+            username='mock_user',
+            defaults={'nickname': '测试用户'},
+        )
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'ok': True,
+            'data': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data,
+            },
+            'message': '',
+        })
 
 
 class WechatLoginView(APIView):
@@ -23,7 +55,6 @@ class WechatLoginView(APIView):
 
         code = serializer.validated_data['code']
         # TODO: V1 真实对接时调用微信 API 换取 openid
-        # 目前使用 code 作为 openid 占位（开发阶段）
         user, _ = User.objects.get_or_create(
             openid=code,
             defaults={'username': f'wx_{code[:8]}', 'nickname': '微信用户'},

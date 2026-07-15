@@ -20,6 +20,8 @@ interface TourState {
   userLocation: { lat: number; lng: number } | null;
   /** 定位精度是否足够 */
   isAccuracyGood: boolean;
+  /** 播放中命中新景点的弱提示文本，AudioBar 消费后清空 */
+  newSpotHint: string | null;
 
   // Actions
   setCurrentHit: (hit: HitSpot | null) => void;
@@ -31,6 +33,7 @@ interface TourState {
   setIsSyncing: (v: boolean) => void;
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
   setIsAccuracyGood: (v: boolean) => void;
+  setNewSpotHint: (hint: string | null) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -41,6 +44,7 @@ export const useTourStore = create<TourState>((set, get) => ({
   isSyncing: false,
   userLocation: null,
   isAccuracyGood: false,
+  newSpotHint: null,
 
   setCurrentHit: (hit) => set({ currentHit: hit }),
 
@@ -68,4 +72,5 @@ export const useTourStore = create<TourState>((set, get) => ({
   setIsSyncing: (v) => set({ isSyncing: v }),
   setUserLocation: (loc) => set({ userLocation: loc }),
   setIsAccuracyGood: (v) => set({ isAccuracyGood: v }),
+  setNewSpotHint: (hint) => set({ newSpotHint: hint }),
 }));

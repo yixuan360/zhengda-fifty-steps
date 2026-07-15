@@ -5,8 +5,10 @@ Django>=4.2,<7.0
 djangorestframework>=3.15
 django-cors-headers>=4.0
 djangorestframework-simplejwt>=5.3
-mysqlclient>=2.2
+djangorestframework-camel-case>=1.4
+PyMySQL>=1.0
 python-decouple>=3.8
+Pillow>=12.0
 gunicorn>=23.0
 
 # 测试
