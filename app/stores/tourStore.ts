@@ -34,6 +34,8 @@ interface TourState {
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
   setIsAccuracyGood: (v: boolean) => void;
   setNewSpotHint: (hint: string | null) => void;
+  /** 用户确认切换：出队并返回下一个景点，供 AudioBar/getPlayer 使用 */
+  switchToNext: () => HitSpot | undefined;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -73,4 +75,11 @@ export const useTourStore = create<TourState>((set, get) => ({
   setUserLocation: (loc) => set({ userLocation: loc }),
   setIsAccuracyGood: (v) => set({ isAccuracyGood: v }),
   setNewSpotHint: (hint) => set({ newSpotHint: hint }),
+  switchToNext: () => {
+    const { queue } = get();
+    if (queue.length === 0) return undefined;
+    const [next, ...rest] = queue;
+    set({ queue: rest });
+    return next;
+  },
 }));

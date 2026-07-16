@@ -105,11 +105,8 @@ export default function AudioBar() {
 
   // 🟢#9: 点击弱提示 → 立即切到下一个
   const handleHintTap = () => {
-    // 调用 useTour 暴露的 switchToNext → dequeue + stop + playNext
     useTourStore.getState().setNewSpotHint(null);
-    // 通过 store 间接触发切换（AudioBar 不直接依赖 useTour hook，通过 store + getPlayer 协作）
-    const store = useTourStore.getState();
-    const next = store.dequeue();
+    const next = useTourStore.getState().switchToNext();
     if (next) {
       getPlayer().stop();
       useAudioStore.getState().setManuallyStopped(false);

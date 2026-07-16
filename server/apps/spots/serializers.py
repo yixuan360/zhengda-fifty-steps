@@ -10,7 +10,6 @@ class SpotSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Spot
-        fields = '__all__'
 
     def to_representation(self, instance):
         request = self.context.get('request')

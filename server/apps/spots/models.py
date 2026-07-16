@@ -55,13 +55,3 @@ class Spot(models.Model):
     def audio_url(self):
         """返回音频相对 URL，用于 API 序列化"""
         return self.audio.url if self.audio else ''
-
-    @property
-    def has_image(self):
-        """判断是否有图片上传"""
-        return bool(self.image and self.image.name)
-
-    @property
-    def has_audio(self):
-        """判断是否有音频上传"""
-        return bool(self.audio and self.audio.name)

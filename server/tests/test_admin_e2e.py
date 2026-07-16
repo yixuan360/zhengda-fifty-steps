@@ -72,7 +72,7 @@ class AdminE2ETest(TestCase):
         self.assertNotContains(response, 'errorlist', status_code=200)
 
         spot = Spot.objects.get(name='测试景点')
-        self.assertTrue(spot.has_image)
+        self.assertTrue(bool(spot.image))
         self.assertIn('images/', spot.image.name)
 
         # ★ API 返回完整 imageUrl（含协议+域名）
@@ -112,8 +112,8 @@ class AdminE2ETest(TestCase):
         self.assertNotContains(response, 'errorlist', status_code=200)
 
         spot = Spot.objects.get(name='完整景点')
-        self.assertTrue(spot.has_image)
-        self.assertTrue(spot.has_audio)
+        self.assertTrue(bool(spot.image))
+        self.assertTrue(bool(spot.audio))
 
         # ★ API 返回完整 URL
         api_response = self.client.get('/api/v1/spots/')

@@ -155,11 +155,9 @@ export function useTour() {
     /** 🟢#9: 用户确认切到队列中的下一个景点 */
     switchToNext: () => {
       const store = useTourStore.getState();
-      const next = store.dequeue();
+      const next = store.switchToNext();
       if (next) {
-        // 清除当前播放
         getPlayer().stop();
-        // 短延迟后播下一个
         if (dequeueTimer.current) clearTimeout(dequeueTimer.current);
         dequeueTimer.current = setTimeout(() => {
           dequeueTimer.current = null;

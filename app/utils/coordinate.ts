@@ -1,5 +1,5 @@
 /**
- * 坐标转换工具 — WGS-84 ↔ GCJ-02
+ * 坐标转换工具 — WGS-84 → GCJ-02
  *
  * v4.0 §3.4：全链路统一 GCJ-02，定位服务底层完成 WGS-84 → GCJ-02 转换。
  * v4.0 §11 P0-2：坐标系偏差验证，转换后与高德地图偏差应 < 5m。
@@ -96,22 +96,5 @@ export function wgs84ToGcj02(lat: number, lng: number): LatLng {
   return {
     lat: lat + dLat,
     lng: lng + dLng,
-  };
-}
-
-/**
- * GCJ-02 → WGS-84（逆转换，精度 ~2m）
- */
-export function gcj02ToWgs84(lat: number, lng: number): LatLng {
-  if (!isInChina(lat, lng)) {
-    return { lat, lng };
-  }
-
-  const { lat: wgsLat, lng: wgsLng } = wgs84ToGcj02(lat, lng);
-
-  // 迭代修正（2 次足够收敛到 < 2m）
-  return {
-    lat: lat * 2 - wgsLat,
-    lng: lng * 2 - wgsLng,
   };
 }

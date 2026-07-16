@@ -50,8 +50,3 @@ export async function syncAll(): Promise<SyncResult> {
   isSyncing = false;
   return result;
 }
-
-/** 重置同步锁（异常恢复用） */
-export function resetSyncLock(): void {
-  isSyncing = false;
-}
