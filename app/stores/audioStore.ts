@@ -40,8 +40,12 @@ export const useAudioStore = create<AudioState>((set) => ({
   setDuration: (dur) => set({ duration: dur }),
   setError: (err) => set({ error: err, state: err ? 'error' : 'idle' }),
   setManuallyStopped: (v) => set({ manuallyStopped: v }),
+  // 注意：reset 不清 manuallyStopped —— 手动停止（AudioBar X）的链路是
+  // setManuallyStopped(true) → stop() → reset()，useTour 需要在 state
+  // 变为 idle 的同一时刻读到 true 才能跳过冷却/写历史。
+  // 该标志由下一次 play() 的 setManuallyStopped(false) 归位。
   reset: () => set({
     state: 'idle', currentUrl: null, spotName: null,
-    position: 0, duration: 0, error: null, manuallyStopped: false,
+    position: 0, duration: 0, error: null,
   }),
 }));

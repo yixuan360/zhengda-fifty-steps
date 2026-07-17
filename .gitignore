@@ -9,13 +9,28 @@ __pycache__/
 node_modules/
 .expo/
 dist/
+web-build/
 .env.local
 .env.*.local
 
-# Android 原生构建产物
+# Android 原生目录不入库（CNG 模式：EAS/prebuild 以 app.config.ts + plugins/ 为真源重新生成；
+# 本地 android/ 仅供 expo run:android，配置已与 app.config.ts 保持同步）
 android/
+ios/
+
+# 构建产物
 *.apk
 *.aab
+*.ipa
+
+# Metro / 打包缓存
+.metro-health-check*
+*.tsbuildinfo
+
+# 规划工作文件（planning-with-files 会话产物）
+task_plan.md
+findings.md
+progress.md
 
 # EAS 构建输出
 eas-build/

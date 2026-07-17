@@ -3,7 +3,7 @@
  * v4.0 §6.1 — useTour 导览引擎核心工具
  * 输入两对 (lat, lng)，返回米级距离
  */
-import type { LatLng } from './coordinate';
+import type { LatLng } from '../types';
 
 const EARTH_RADIUS_M = 6_371_000;
 

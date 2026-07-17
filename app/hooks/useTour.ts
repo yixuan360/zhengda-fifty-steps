@@ -18,8 +18,7 @@ import { useAudioStore } from '../stores/audioStore';
 import { haversineDistance } from '../utils/distance';
 import { insertPlayHistory } from '../services/database';
 import { getPlayer } from './useAudioPlayer';
-import type { LatLng } from '../utils/coordinate';
-import type { HitSpot } from '../types';
+import type { LatLng, HitSpot } from '../types';
 
 const BUFFER_METERS = 20; // 滞回缓冲带宽度（米）
 

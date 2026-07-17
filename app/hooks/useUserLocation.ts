@@ -1,46 +1,63 @@
 /**
- * 定位 Hook — expo-location 封装
- * v4.0 §6.1：申请权限 → 监听位置 → WGS-84 → GCJ-02 → 精度过滤 → 更新 store
+ * 定位 Hook — 高德定位 SDK（react-native-amap-geolocation）
+ * v4.0 §6.1：申请权限 → 高德连续定位 → 精度过滤 → 更新 store
  *
+ * 高德定位在国内直接返回 GCJ-02 坐标，与服务端录入坐标系一致，
+ * 无需（也绝不能再做）WGS-84 → GCJ-02 转换 —— v4.0 §3.4 坐标统一在此收口。
+ *
+ * 节流：SDK 层 setInterval(1000)（见 services/amap.ts），JS 侧不再重复节流。
  * 订阅只创建一次（依赖 []），状态存入 tourStore 供 useTour 消费。
  */
 import { useEffect, useRef } from 'react';
-import * as Location from 'expo-location';
+import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import { useTourStore } from '../stores/tourStore';
-import { wgs84ToGcj02 } from '../utils/coordinate';
-import type { LatLng } from '../utils/coordinate';
+import { initAMap } from '../services/amap';
 
 export function useUserLocation() {
-  const subscription = useRef<Location.LocationSubscription | null>(null);
+  const watchId = useRef<number | null>(null);
   const store = useTourStore();
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.warn('[useUserLocation] 定位权限被拒绝');
-          return;
+        // ── 1. 运行时权限（Android 12+ 精确/大致位置二选一弹窗） ──
+        if (Platform.OS === 'android') {
+          const result = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+          ]);
+          const fine = result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+          const coarse = result[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION];
+
+          if (fine !== 'granted' && coarse !== 'granted') {
+            console.warn('[useUserLocation] 定位权限被拒绝');
+            return;
+          }
+          // v4.0 §11 P1：仅授予"大致位置"时精度常年 >20m，自动触发永远不生效 → 引导
+          if (fine !== 'granted') {
+            Alert.alert(
+              '需要精确位置',
+              '当前仅授予了大致位置，无法在走近景点时自动播放讲解。\n请在系统设置中为本应用开启"精确位置"。',
+            );
+          }
         }
 
-        subscription.current = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 1000,   // 1次/s 节流（v4.0 §6.1）
-            distanceInterval: 0,  // 不跳过任何位置更新
+        // ── 2. 初始化高德 SDK（幂等；失败静默降级，不阻塞 App） ──
+        const ok = await initAMap();
+        if (!ok || cancelled) return;
+
+        // ── 3. 连续定位（GCJ-02 直出） ──
+        const { Geolocation } = require('react-native-amap-geolocation');
+        watchId.current = Geolocation.watchPosition(
+          (pos: { coords: { latitude: number; longitude: number; accuracy: number } }) => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            store.setUserLocation({ lat: latitude, lng: longitude });
+            store.setIsAccuracyGood(accuracy > 0 && accuracy <= 20);
           },
-          (loc) => {
-            try {
-              const { latitude, longitude, accuracy } = loc.coords;
-
-              // WGS-84 → GCJ-02 转换（v4.0 §3.4）
-              const gcj: LatLng = wgs84ToGcj02(latitude, longitude);
-
-              store.setUserLocation(gcj);
-              store.setIsAccuracyGood(accuracy != null && accuracy <= 20);
-            } catch (err) {
-              console.error('[useUserLocation] 位置回调异常:', err);
-            }
+          (err: { code: number; message: string }) => {
+            console.warn('[useUserLocation] 定位失败:', err.code, err.message);
           },
         );
       } catch (err) {
@@ -49,7 +66,14 @@ export function useUserLocation() {
     })();
 
     return () => {
-      subscription.current?.remove();
+      cancelled = true;
+      if (watchId.current != null) {
+        try {
+          const { Geolocation } = require('react-native-amap-geolocation');
+          Geolocation.clearWatch(watchId.current);
+        } catch { /* 原生模块缺失时静默 */ }
+        watchId.current = null;
+      }
     };
   }, []);
 

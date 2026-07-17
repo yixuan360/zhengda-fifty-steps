@@ -28,25 +28,27 @@ export async function syncAll(): Promise<SyncResult> {
   const result: SyncResult = { spotsOk: false, configOk: false, skipped: false };
 
   try {
-    const spotsRes = await fetchSpots();
-    if (spotsRes.ok && spotsRes.data.spots) {
-      await replaceAllSpots(spotsRes.data.spots);
-      result.spotsOk = true;
+    try {
+      const spotsRes = await fetchSpots();
+      if (spotsRes.ok && spotsRes.data.spots) {
+        await replaceAllSpots(spotsRes.data.spots);
+        result.spotsOk = true;
+      }
+    } catch {
+      // 静默跳过，沿用本地数据
     }
-  } catch {
-    // 静默跳过，沿用本地数据
-  }
 
-  try {
-    const configRes = await fetchConfig();
-    if (configRes.ok && configRes.data) {
-      await replaceAllConfig(configRes.data);
-      result.configOk = true;
+    try {
+      const configRes = await fetchConfig();
+      if (configRes.ok && configRes.data) {
+        await replaceAllConfig(configRes.data);
+        result.configOk = true;
+      }
+    } catch {
+      // 静默跳过，沿用本地默认值
     }
-  } catch {
-    // 静默跳过，沿用本地默认值
+  } finally {
+    isSyncing = false; // 任何路径都复位，避免锁死后续同步
   }
-
-  isSyncing = false;
   return result;
 }

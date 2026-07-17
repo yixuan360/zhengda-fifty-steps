@@ -10,6 +10,9 @@ class SpotSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Spot
+        # to_representation 已整体覆盖输出；声明 fields 满足 DRF 断言，
+        # 避免 BrowsableAPI 等路径访问 serializer.fields 时抛异常
+        fields = '__all__'
 
     def to_representation(self, instance):
         request = self.context.get('request')

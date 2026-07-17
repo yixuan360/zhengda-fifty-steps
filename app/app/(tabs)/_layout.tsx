@@ -1,5 +1,5 @@
 /**
- * Tab 导航 — 地图 / 列表 / 测试
+ * Tab 导航 — 地图 / 列表
  */
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

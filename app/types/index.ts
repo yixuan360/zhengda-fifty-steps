@@ -3,6 +3,12 @@
  * 对齐 v4.0 §7
  */
 
+/** 坐标点（GCJ-02，全链路统一坐标系） */
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 /** API 统一响应格式 */
 export interface ApiResponse<T> {
   ok: boolean;

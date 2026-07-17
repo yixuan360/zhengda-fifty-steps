@@ -1,6 +1,11 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "paths": {
+      // amap3d 的 main 指向未编译 TSX 源码，tsc 检查会陷入上游类型错误；
+      // 类型解析指向本地 shim（types/react-native-amap3d.d.ts），Metro 打包不受影响
+      "react-native-amap3d": ["./types/react-native-amap3d.d.ts"]
+    }
   }
 }

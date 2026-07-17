@@ -57,11 +57,7 @@ export default function ListScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.hint}>暂无景点数据</Text>
-        <Text style={styles.subHint}>
-          {typeof navigator !== 'undefined' && !navigator.onLine
-            ? '当前无网络，请连接网络后下拉刷新'
-            : '下拉刷新从服务器同步'}
-        </Text>
+        <Text style={styles.subHint}>下拉刷新从服务器同步</Text>
       </View>
     );
   }

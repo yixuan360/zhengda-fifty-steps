@@ -7,11 +7,17 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "118fc4e6f7c291b545f9195d2a22f39c"
       }
     },
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "118fc4e6f7c291b545f9195d2a22f39c"
       }
     }
   },
