@@ -66,6 +66,19 @@ export async function replaceAllSpots(spots: Spot[]): Promise<void> {
   });
 }
 
+/**
+ * 离线兜底：SQLite 为空时灌入内置种子景点。
+ * 在启动同步之前调用——同步成功会整体覆盖种子数据，
+ * 同步失败（无网/服务器不可达）时保证 App 开箱有数据。
+ */
+export async function seedIfEmpty(seeds: Spot[]): Promise<boolean> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM spots');
+  if ((row?.n ?? 0) > 0) return false;
+  await replaceAllSpots(seeds);
+  return true;
+}
+
 /** 读取全部有效景点 */
 export async function getAllSpots(): Promise<Spot[]> {
   const database = await getDatabase();
