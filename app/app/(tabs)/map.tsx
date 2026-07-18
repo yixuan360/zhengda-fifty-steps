@@ -2,7 +2,7 @@
  * 地图首页 — 高德原生地图 + 玻璃拟态状态条（V5.4）
  * v4.0 §2：打开 App 就是地图
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { MapView, Marker } from 'react-native-amap3d';
 import { useRouter } from 'expo-router';
@@ -13,14 +13,12 @@ import { useTour } from '../../hooks/useTour';
 import { initAMap } from '../../services/amap';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
-/** 郑州大学主校区兜底初始视角（GCJ-02） */
-const ZZU_CAMPUS = { latitude: 34.8172, longitude: 113.5348 };
+/** 郑州大学主校区中心点（GCJ-02，标定边界西南+东北取中） */
+const ZZU_CAMPUS = { latitude: 34.8175, longitude: 113.5354 };
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const mapRef = useRef<MapView>(null);
-  const hasFirstFix = useRef(false);
   const [amapReady, setAmapReady] = useState<boolean | null>(null);
   const { location: userLocation, isAccuracyGood } = useUserLocation();
   useTour();
@@ -28,16 +26,6 @@ export default function MapScreen() {
   const activeSpots = spots.filter((s) => s.isActive);
 
   useEffect(() => { initAMap().then(setAmapReady); }, []);
-
-  useEffect(() => {
-    if (userLocation && !hasFirstFix.current) {
-      hasFirstFix.current = true;
-      mapRef.current?.moveCamera(
-        { target: { latitude: userLocation.lat, longitude: userLocation.lng }, zoom: 17 },
-        500,
-      );
-    }
-  }, [userLocation]);
 
   if (amapReady === false) {
     return (
@@ -54,7 +42,6 @@ export default function MapScreen() {
     <View style={styles.container}>
       {amapReady && (
         <MapView
-          ref={mapRef}
           style={styles.map}
           initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 16 }}
           myLocationEnabled

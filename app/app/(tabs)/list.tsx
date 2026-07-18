@@ -11,12 +11,14 @@ import { getAllSpots } from '../../services/database';
 import { syncAll } from '../../services/sync';
 import { haversineDistance } from '../../utils/distance';
 import { useTourStore } from '../../stores/tourStore';
-import { Color, Spacing } from '../../constants/theme';
+import { Color, Spacing, Radius } from '../../constants/theme';
 
 export default function ListScreen() {
   const { spots, setSpots, userLocation } = useTourStore();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  /** true=上次同步失败（提示用户检查网络）；null=尚无同步记录；false=同步成功 */
+  const [syncFailed, setSyncFailed] = useState<boolean | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -31,7 +33,12 @@ export default function ListScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await syncAll();
+    try {
+      const result = await syncAll();
+      setSyncFailed(!result.spotsOk);
+    } catch {
+      setSyncFailed(true);
+    }
     await loadData();
     setRefreshing(false);
   }, [loadData]);
@@ -65,6 +72,15 @@ export default function ListScreen() {
           tintColor={Color.primary}
           progressBackgroundColor="#FFFFFF"
         />
+      }
+      ListHeaderComponent={
+        syncFailed === true ? (
+          <View style={styles.syncBar}>
+            <Text style={styles.syncBarText}>
+              ⚠ 无法连接服务器，当前显示的是离线数据。请检查网络后下拉刷新。
+            </Text>
+          </View>
+        ) : null
       }
       ListEmptyComponent={
         <View style={styles.centered}>
@@ -100,4 +116,14 @@ const styles = StyleSheet.create({
     backgroundColor: Color.primarySoft,
   },
   subHint: { fontSize: 13, color: Color.primary },
+  syncBar: {
+    marginHorizontal: Spacing.pageH,
+    marginTop: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Color.warningBg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(217,74,74,0.3)',
+  },
+  syncBarText: { fontSize: 13, color: '#fff', fontWeight: '500', lineHeight: 19 },
 });
