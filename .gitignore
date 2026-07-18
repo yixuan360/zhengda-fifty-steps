@@ -27,10 +27,6 @@ ios/
 .metro-health-check*
 *.tsbuildinfo
 
-# 规划工作文件（planning-with-files 会话产物）
-task_plan.md
-findings.md
-progress.md
 
 # EAS 构建输出
 eas-build/
