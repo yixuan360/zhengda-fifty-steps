@@ -261,12 +261,12 @@ const styles = StyleSheet.create({
   // ── 进度条 ──
   progressTrack: {
     height: 3,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     width: SCREEN_WIDTH,
   },
   progressFill: {
     height: 3,
-    backgroundColor: '#1677FF',
+    backgroundColor: '#2EBD85',
     borderRadius: 1.5,
   },
 });

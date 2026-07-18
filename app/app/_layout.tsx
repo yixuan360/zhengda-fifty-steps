@@ -37,10 +37,19 @@ export default function RootLayout() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="spot/[id]" options={{ headerShown: true, title: '景点详情', headerBackTitle: '返回' }} />
+        <Stack.Screen
+          name="spot/[id]"
+          options={{
+            headerShown: true,
+            title: '景点详情',
+            headerBackTitle: '返回',
+            headerStyle: { backgroundColor: '#F2F4F6' },
+            headerTintColor: '#1A7A5A',
+          }}
+        />
       </Stack>
       <AudioBar />
     </View>

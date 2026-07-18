@@ -1,6 +1,8 @@
 /**
- * 景点列表页 — FlatList + pull-to-refresh
- * 排序：按距离（有定位时）/ 按名称（无定位时）
+ * 景点列表页 — FlatList + pull-to-refresh + 玻璃拟态卡片（V5.4）
+ *
+ * 空状态通过 ListEmptyComponent 渲染在 FlatList 内部，
+ * RefreshControl 始终在位，确保任何状态都能下拉触发同步。
  */
 import { useEffect, useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, RefreshControl } from 'react-native';
@@ -9,7 +11,7 @@ import { getAllSpots } from '../../services/database';
 import { syncAll } from '../../services/sync';
 import { haversineDistance } from '../../utils/distance';
 import { useTourStore } from '../../stores/tourStore';
-import type { Spot } from '../../types';
+import { Color, Spacing } from '../../constants/theme';
 
 export default function ListScreen() {
   const { spots, setSpots, userLocation } = useTourStore();
@@ -25,9 +27,7 @@ export default function ListScreen() {
     }
   }, [setSpots]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -45,23 +45,6 @@ export default function ListScreen() {
     return a.name.localeCompare(b.name, 'zh');
   });
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.hint}>加载中...</Text>
-      </View>
-    );
-  }
-
-  if (sortedSpots.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.hint}>暂无景点数据</Text>
-        <Text style={styles.subHint}>下拉刷新从服务器同步</Text>
-      </View>
-    );
-  }
-
   return (
     <FlatList
       data={sortedSpots}
@@ -72,22 +55,49 @@ export default function ListScreen() {
           : null;
         return <SpotCard spot={item} distance={dist} />;
       }}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={sortedSpots.length === 0 ? styles.emptyContainer : styles.list}
+      style={{ backgroundColor: Color.pageBg }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Color.primary]}
+          tintColor={Color.primary}
+          progressBackgroundColor="#FFFFFF"
+        />
+      }
+      ListEmptyComponent={
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>🗺️</Text>
+          <Text style={styles.hint}>{loading ? '加载中...' : '暂无景点数据'}</Text>
+          {!loading && (
+            <View style={styles.refreshHint}>
+              <Text style={styles.subHint}>↓ 下拉刷新从服务器同步</Text>
+            </View>
+          )}
+        </View>
       }
     />
   );
 }
 
 const styles = StyleSheet.create({
-  list: { paddingVertical: 8 },
+  list: { paddingVertical: Spacing.sm, paddingBottom: 100 },
+  emptyContainer: { flexGrow: 1, backgroundColor: Color.pageBg },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    paddingHorizontal: Spacing.pageH,
   },
-  hint: { fontSize: 16, color: '#666' },
-  subHint: { fontSize: 13, color: '#999', marginTop: 8 },
+  emptyIcon: { fontSize: 40, marginBottom: Spacing.md },
+  hint: { fontSize: 16, fontWeight: '600', color: Color.heading },
+  refreshHint: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: 999,
+    backgroundColor: Color.primarySoft,
+  },
+  subHint: { fontSize: 13, color: Color.primary },
 });
