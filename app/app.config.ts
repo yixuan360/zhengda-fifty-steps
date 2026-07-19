@@ -11,11 +11,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: '郑大五十步',
   slug: 'zhengda-fifty-steps',
-  owner: 'aronys-team',
+  owner: 'abc123098',
   version: '1.0.0',
   extra: {
     eas: {
-      projectId: 'c4235a54-c349-4916-b963-5fe50ff70a43',
+      projectId: '1896ff8f-f0d8-40e0-a72e-ed8f7a12c1a2',
     },
   },
   orientation: 'portrait',
