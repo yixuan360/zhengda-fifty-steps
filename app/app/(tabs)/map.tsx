@@ -15,8 +15,8 @@ import { useTour } from '../../hooks/useTour';
 import { initAMap } from '../../services/amap';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
-/** 郑州大学主校区中心点（GCJ-02，标定边界西南+东北取中） */
-const ZZU_CAMPUS = { latitude: 34.8175, longitude: 113.5354 };
+/** 郑州大学主校区中心点（GCJ-02，42 个景点质心 + 北偏微调覆盖眉湖厚山） */
+const ZZU_CAMPUS = { latitude: 34.8186, longitude: 113.5365 };
 
 /** 5 次点击激活模拟定位面板 */
 const DEBUG_TAP_COUNT = 5;
@@ -96,7 +96,7 @@ export default function MapScreen() {
       {amapReady && (
         <MapView
           style={styles.map}
-          initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 16 }}
+          initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 14 }}
           myLocationEnabled
           myLocationButtonEnabled={false}
           rotateGesturesEnabled={false}
