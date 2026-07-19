@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "b6719a7d90ce9d9e946d48b2f04c03b8c",
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "e7171cce2b78edd39bbd690b0be83ab3",
         "EXPO_PUBLIC_API_BASE_URL": "http://192.168.0.103:8000"
       }
     },
@@ -18,7 +18,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "b6719a7d90ce9d9e946d48b2f04c03b8c"
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "e7171cce2b78edd39bbd690b0be83ab3"
       }
     }
   },
