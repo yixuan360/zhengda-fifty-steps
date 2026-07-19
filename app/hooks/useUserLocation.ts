@@ -59,6 +59,8 @@ export function useUserLocation() {
         const { Geolocation } = require('react-native-amap-geolocation');
         watchId.current = Geolocation.watchPosition(
           (pos: { coords: { latitude: number; longitude: number; accuracy: number } }) => {
+            // 模拟定位激活时跳过真实 GPS 写入，防止 mock 被 1s 后的 GPS 回调覆盖
+            if (useTourStore.getState().mockLocation) return;
             const { latitude, longitude, accuracy } = pos.coords;
             store.setUserLocation({ lat: latitude, lng: longitude });
             store.setIsAccuracyGood(accuracy > 0 && accuracy <= 20);
@@ -84,14 +86,18 @@ export function useUserLocation() {
     };
   }, []);
 
-  // ── 返回值：模拟定位优先 ──
+  // ── mock 坐标 → store.userLocation，导览引擎才能感知并触发播放 ──
   const mock = store.mockLocation;
-  const real = store.userLocation;
-  const effective = mock ?? real;
+  useEffect(() => {
+    if (mock) {
+      store.setUserLocation(mock);
+      store.setIsAccuracyGood(true);
+    }
+  }, [mock]);
 
   return {
     /** 用户当前位置（GCJ-02），mock 优先 */
-    location: effective,
+    location: mock ?? store.userLocation,
     /** 精度是否足够 */
     isAccuracyGood: mock != null ? true : store.isAccuracyGood,
     /** 当前精度数值（米），mock 时为固定 5m */
