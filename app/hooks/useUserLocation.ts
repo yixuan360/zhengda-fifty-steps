@@ -1,5 +1,5 @@
 /**
- * 定位 Hook — 高德定位 SDK（react-native-amap-geolocation）
+ * 定位 Hook — 高德定位 SDK（react-native-amap-geolocation） + 模拟定位
  * v4.0 §6.1：申请权限 → 高德连续定位 → 精度过滤 → 更新 store
  *
  * 高德定位在国内直接返回 GCJ-02 坐标，与服务端录入坐标系一致，
@@ -7,11 +7,18 @@
  *
  * 节流：SDK 层 setInterval(1000)（见 services/amap.ts），JS 侧不再重复节流。
  * 订阅只创建一次（依赖 []），状态存入 tourStore 供 useTour 消费。
+ *
+ * 模拟定位（开发调试用）：tourStore.mockLocation 非 null 时，本 Hook
+ * 直接注入该值为用户位置（精度标记为合格，绕过真机 GPS），真实定位订阅
+ * 仍保持运行——清除 mock 后无缝恢复。
  */
 import { useEffect, useRef } from 'react';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import { useTourStore } from '../stores/tourStore';
 import { initAMap } from '../services/amap';
+
+/** 模拟定位的"伪精度"——标记为合格，让导览引擎正常触发 */
+const MOCK_ACCURACY = 5;
 
 export function useUserLocation() {
   const watchId = useRef<number | null>(null);
@@ -77,10 +84,17 @@ export function useUserLocation() {
     };
   }, []);
 
+  // ── 返回值：模拟定位优先 ──
+  const mock = store.mockLocation;
+  const real = store.userLocation;
+  const effective = mock ?? real;
+
   return {
-    /** 用户当前位置（GCJ-02），来自 tourStore */
-    location: store.userLocation,
-    /** 精度是否足够（≤20m） */
-    isAccuracyGood: store.isAccuracyGood,
+    /** 用户当前位置（GCJ-02），mock 优先 */
+    location: effective,
+    /** 精度是否足够 */
+    isAccuracyGood: mock != null ? true : store.isAccuracyGood,
+    /** 当前精度数值（米），mock 时为固定 5m */
+    accuracy: mock != null ? MOCK_ACCURACY : null,
   };
 }

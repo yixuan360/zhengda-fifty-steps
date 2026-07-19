@@ -20,6 +20,8 @@ interface TourState {
   userLocation: { lat: number; lng: number } | null;
   /** 定位精度是否足够 */
   isAccuracyGood: boolean;
+  /** 模拟定位（GCJ-02），非 null 时 useUserLocation 优先返回此值并标记精度合格 */
+  mockLocation: { lat: number; lng: number } | null;
   /** 播放中命中新景点的弱提示文本，AudioBar 消费后清空 */
   newSpotHint: string | null;
 
@@ -33,6 +35,8 @@ interface TourState {
   setIsSyncing: (v: boolean) => void;
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
   setIsAccuracyGood: (v: boolean) => void;
+  /** 设置模拟定位；传 null 清除，恢复真实 GPS */
+  setMockLocation: (loc: { lat: number; lng: number } | null) => void;
   setNewSpotHint: (hint: string | null) => void;
   /** 用户确认切换：出队并返回下一个景点，供 AudioBar/getPlayer 使用 */
   switchToNext: () => HitSpot | undefined;
@@ -46,6 +50,7 @@ export const useTourStore = create<TourState>((set, get) => ({
   isSyncing: false,
   userLocation: null,
   isAccuracyGood: false,
+  mockLocation: null,
   newSpotHint: null,
 
   setCurrentHit: (hit) => set({ currentHit: hit }),
@@ -74,6 +79,7 @@ export const useTourStore = create<TourState>((set, get) => ({
   setIsSyncing: (v) => set({ isSyncing: v }),
   setUserLocation: (loc) => set({ userLocation: loc }),
   setIsAccuracyGood: (v) => set({ isAccuracyGood: v }),
+  setMockLocation: (loc) => set({ mockLocation: loc }),
   setNewSpotHint: (hint) => set({ newSpotHint: hint }),
   switchToNext: () => {
     const { queue } = get();
