@@ -30,6 +30,7 @@ async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
       description     TEXT NOT NULL DEFAULT '',
       image_url       TEXT DEFAULT '',
       audio_url       TEXT DEFAULT '',
+      category        TEXT DEFAULT '',
       is_active       INTEGER DEFAULT 1,
       updated_at      INTEGER DEFAULT 0
     );
@@ -57,10 +58,10 @@ export async function replaceAllSpots(spots: Spot[]): Promise<void> {
     await database.runAsync('DELETE FROM spots');
     for (const s of spots) {
       await database.runAsync(
-        `INSERT INTO spots (id, name, lat, lng, trigger_radius, summary, description, image_url, audio_url, is_active, updated_at)
+        `INSERT INTO spots (id, name, lat, lng, trigger_radius, summary, description, image_url, audio_url, category, is_active, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [s.id, s.name, s.lat, s.lng, s.triggerRadius, s.summary, s.description,
-         s.imageUrl, s.audioUrl, s.isActive ? 1 : 0, s.updatedAt],
+         s.imageUrl, s.audioUrl, s.category || '', s.isActive ? 1 : 0, s.updatedAt],
       );
     }
   });
