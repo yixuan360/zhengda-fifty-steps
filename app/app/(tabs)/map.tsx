@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView,
+  Platform,
 } from 'react-native';
 import { MapView, Marker } from 'react-native-amap3d';
 import { useRouter } from 'expo-router';
@@ -109,7 +110,23 @@ export default function MapScreen() {
               key={spot.id}
               position={{ latitude: spot.lat, longitude: spot.lng }}
               onPress={() => router.push(`/spot/${spot.id}`)}
-            />
+            >
+              {/* 校徽红色圆形标记点（#8B1A2B） */}
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  backgroundColor: '#8B1A2B',
+                  borderWidth: 2.5,
+                  borderColor: '#FFFFFF',
+                  ...Platform.select({
+                    android: { elevation: 4 },
+                    default: { shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+                  }),
+                }}
+              />
+            </Marker>
           ))}
         </MapView>
       )}
