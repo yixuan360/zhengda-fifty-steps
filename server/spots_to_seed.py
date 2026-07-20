@@ -16,7 +16,7 @@ for s in spots:
             del s[k]
 
 def esc(v):
-    return v.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
+    return v.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
 
 lines = []
 lines.append('/**')
@@ -34,17 +34,20 @@ lines.append('')
 lines.append('const s = (')
 lines.append('  id: number, name: string, lat: number, lng: number,')
 lines.append('  triggerRadius: number, summary: string, description: string,')
+lines.append('  category: string = "architecture",')
 lines.append('): Spot => ({')
 lines.append('  id, name, lat, lng, triggerRadius, summary, description,')
-lines.append("  imageUrl: '', audioUrl: '', isActive: true, updatedAt: 0,")
+lines.append('  imageUrl: "", audioUrl: "", isActive: true, category, updatedAt: 0,')
 lines.append('});')
 lines.append('')
 lines.append('export const SEED_SPOTS: Spot[] = [')
 
 for sp in spots:
-    lines.append(f"  s({sp['id']}, '{esc(sp['name'])}', {sp['lat']}, {sp['lng']}, {sp['trigger_radius']},")
-    lines.append(f"    '{esc(sp['summary'])}',")
-    lines.append(f"    '{esc(sp['description'])}'),")
+    cat = sp.get('category') or 'architecture'
+    lines.append(f'  s({sp["id"]}, "{esc(sp["name"])}", {sp["lat"]}, {sp["lng"]}, {sp["trigger_radius"]},')
+    lines.append(f'    "{esc(sp["summary"])}",')
+    lines.append(f'    "{esc(sp["description"])}",')
+    lines.append(f'    "{esc(cat)}"),')
 
 lines.append('];')
 lines.append('')

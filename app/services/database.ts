@@ -68,16 +68,15 @@ export async function replaceAllSpots(spots: Spot[]): Promise<void> {
 }
 
 /**
- * 离线兜底：SQLite 为空时灌入内置种子景点。
- * 在启动同步之前调用——同步成功会整体覆盖种子数据，
- * 同步失败（无网/服务器不可达）时保证 App 开箱有数据。
+ * 离线兜底：每次启动用最新内置种子覆盖 SQLite。
+ * 同步成功后服务器数据会再次整体覆盖种子数据；
+ * 同步失败（无网/服务器不可达）时 App 仍显示最新的离线数据。
  */
-export async function seedIfEmpty(seeds: Spot[]): Promise<boolean> {
+export async function seedFresh(seeds: Spot[]): Promise<void> {
   const database = await getDatabase();
-  const row = await database.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM spots');
-  if ((row?.n ?? 0) > 0) return false;
+  // 兼容旧表：幂等补 category 列（已存在则静默跳过）
+  try { await database.execAsync('ALTER TABLE spots ADD COLUMN category TEXT DEFAULT \"\"'); } catch { /* ok */ }
   await replaceAllSpots(seeds);
-  return true;
 }
 
 /** 读取全部有效景点 */
