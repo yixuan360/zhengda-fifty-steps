@@ -28,6 +28,7 @@ export interface Spot {
   imageUrl: string;
   audioUrl: string;
   isActive: boolean;
+  category?: string;  // 'college'|'nature'|'architecture'|'teaching'|'service'|'humanity'
   updatedAt: number;   // 毫秒 Unix 时间戳
 }
 

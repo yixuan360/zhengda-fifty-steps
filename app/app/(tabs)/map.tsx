@@ -14,7 +14,7 @@ import { useTourStore } from '../../stores/tourStore';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { useTour } from '../../hooks/useTour';
 import { initAMap } from '../../services/amap';
-import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
+import { Color, Spacing, Radius, Shadow, CATEGORY_COLORS } from '../../constants/theme';
 
 /** 郑州大学主校区中心点（GCJ-02，42 个景点质心 + 北偏微调覆盖眉湖厚山） */
 const ZZU_CAMPUS = { latitude: 34.8186, longitude: 113.5365 };
@@ -105,29 +105,31 @@ export default function MapScreen() {
           zoomControlsEnabled={false}
           labelsEnabled
         >
-          {activeSpots.map((spot) => (
+          {activeSpots.map((spot) => {
+            const catColor = CATEGORY_COLORS[(spot as any).category] || '#8B1A2B';
+            return (
             <Marker
               key={spot.id}
               position={{ latitude: spot.lat, longitude: spot.lng }}
               onPress={() => router.push(`/spot/${spot.id}`)}
             >
-              {/* 校徽红色圆形标记点（#8B1A2B） */}
               <View
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 11,
-                  backgroundColor: '#8B1A2B',
-                  borderWidth: 2.5,
-                  borderColor: '#FFFFFF',
-                  ...Platform.select({
-                    android: { elevation: 4 },
-                    default: { shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-                  }),
-                }}
-              />
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: catColor,
+                        borderWidth: 2.5,
+                        borderColor: '#FFFFFF',
+                        ...Platform.select({
+                          android: { elevation: 4 },
+                          default: { shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+                        }),
+                      }}
+                    />
             </Marker>
-          ))}
+            );
+          })}
         </MapView>
       )}
 

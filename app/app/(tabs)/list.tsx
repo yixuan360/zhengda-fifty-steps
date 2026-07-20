@@ -1,129 +1,83 @@
 /**
- * 景点列表页 — FlatList + pull-to-refresh + 玻璃拟态卡片（V5.4）
- *
- * 空状态通过 ListEmptyComponent 渲染在 FlatList 内部，
- * RefreshControl 始终在位，确保任何状态都能下拉触发同步。
+ * 景点列表页 — 手风琴分组（V5.6）
+ * 六个分类可独立展开/收起，每个分类独立着色指示条。
  */
 import { useEffect, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, RefreshControl } from 'react-native';
+import { View, FlatList, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import SpotCard from '../../components/SpotCard';
 import { getAllSpots } from '../../services/database';
 import { syncAll } from '../../services/sync';
 import { haversineDistance } from '../../utils/distance';
 import { useTourStore } from '../../stores/tourStore';
-import { Color, Spacing, Radius } from '../../constants/theme';
+import { Color, Spacing, Radius, CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ORDER } from '../../constants/theme';
+import type { Spot } from '../../types';
+
+interface Section { key: string; title: string; color: string; data: Spot[]; expanded: boolean }
+type FlatItem = { type: 'header'; key: string; section: Section } | { type: 'spot'; key: string; spot: Spot; color: string };
 
 export default function ListScreen() {
   const { spots, setSpots, userLocation } = useTourStore();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  /** true=上次同步失败（提示用户检查网络）；null=尚无同步记录；false=同步成功 */
-  const [syncFailed, setSyncFailed] = useState<boolean | null>(null);
+  const [syncFailed, setSyncFailed] = useState<boolean|null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['college']));
 
-  const loadData = useCallback(async () => {
-    try {
-      const localSpots = await getAllSpots();
-      setSpots(localSpots);
-    } finally {
-      setLoading(false);
-    }
-  }, [setSpots]);
-
+  const loadData = useCallback(async () => { try { setSpots(await getAllSpots()); } finally { setLoading(false); } }, [setSpots]);
   useEffect(() => { loadData(); }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      const result = await syncAll();
-      setSyncFailed(!result.spotsOk);
-    } catch {
-      setSyncFailed(true);
-    }
-    await loadData();
-    setRefreshing(false);
+    try { const r = await syncAll(); setSyncFailed(!r.spotsOk); } catch { setSyncFailed(true); }
+    await loadData(); setRefreshing(false);
   }, [loadData]);
 
-  const sortedSpots = [...spots].sort((a, b) => {
-    if (userLocation) {
-      const da = haversineDistance(userLocation, { lat: a.lat, lng: a.lng });
-      const db = haversineDistance(userLocation, { lat: b.lat, lng: b.lng });
-      return da - db;
-    }
-    return a.name.localeCompare(b.name, 'zh');
-  });
+  const toggleSection = (key: string) => setExpandedSections(p => { const n=new Set(p); n.has(key)?n.delete(key):n.add(key); return n; });
+
+  const grouped: Record<string, Spot[]> = {};
+  for (const s of spots) { const cat = s.category||'architecture'; (grouped[cat]??=[]).push(s); }
+  for (const key of Object.keys(grouped)) grouped[key].sort((a,b) => userLocation ? haversineDistance(userLocation,{lat:a.lat,lng:a.lng})-haversineDistance(userLocation,{lat:b.lat,lng:b.lng}) : a.name.localeCompare(b.name,'zh'));
+
+  const sections: Section[] = CATEGORY_ORDER.filter(k=>grouped[k]?.length).map(k=>({key:k,title:CATEGORY_LABELS[k]||k,color:CATEGORY_COLORS[k]||'#999',data:grouped[k],expanded:expandedSections.has(k)}));
+  const flatData: FlatItem[] = [];
+  for (const sec of sections) { flatData.push({type:'header',key:'h-'+sec.key,section:sec}); if (sec.expanded) for (const s of sec.data) flatData.push({type:'spot',key:'s-'+s.id,spot:s,color:sec.color}); }
 
   return (
-    <FlatList
-      data={sortedSpots}
-      keyExtractor={(item) => String(item.id)}
-      renderItem={({ item }) => {
-        const dist = userLocation
-          ? haversineDistance(userLocation, { lat: item.lat, lng: item.lng })
-          : null;
-        return <SpotCard spot={item} distance={dist} />;
+    <FlatList data={flatData} keyExtractor={i=>i.key}
+      renderItem={({item}) => {
+        if (item.type==='header') {
+          const sec=item.section;
+          return (
+            <TouchableOpacity style={[styles.header,{borderLeftColor:sec.color}]} onPress={()=>toggleSection(sec.key)} activeOpacity={0.7}>
+              <Text style={styles.headerText}>{sec.title} ({sec.data.length})</Text>
+              <Text style={[styles.headerArrow,sec.expanded&&styles.headerArrowOpen]}>{'▶'}</Text>
+            </TouchableOpacity>
+          );
+        }
+        const dist = userLocation ? haversineDistance(userLocation,{lat:item.spot.lat,lng:item.spot.lng}) : null;
+        return (<View style={styles.spotRow}><View style={[styles.spotDot,{backgroundColor:item.color}]}/><View style={styles.spotCardWrap}><SpotCard spot={item.spot} distance={dist}/></View></View>);
       }}
-      contentContainerStyle={sortedSpots.length === 0 ? styles.emptyContainer : styles.list}
-      style={{ backgroundColor: Color.pageBg }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={[Color.primary]}
-          tintColor={Color.primary}
-          progressBackgroundColor="#FFFFFF"
-        />
-      }
-      ListHeaderComponent={
-        syncFailed === true ? (
-          <View style={styles.syncBar}>
-            <Text style={styles.syncBarText}>
-              ⚠ 无法连接服务器，当前显示的是离线数据。请检查网络后下拉刷新。
-            </Text>
-          </View>
-        ) : null
-      }
-      ListEmptyComponent={
-        <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>🗺️</Text>
-          <Text style={styles.hint}>{loading ? '加载中...' : '暂无景点数据'}</Text>
-          {!loading && (
-            <View style={styles.refreshHint}>
-              <Text style={styles.subHint}>↓ 下拉刷新从服务器同步</Text>
-            </View>
-          )}
-        </View>
-      }
+      style={{backgroundColor:Color.pageBg}} contentContainerStyle={styles.list}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Color.primary]} tintColor={Color.primary} progressBackgroundColor='#FFFFFF'/>}
+      ListHeaderComponent={syncFailed===true?<View style={styles.syncBar}><Text style={styles.syncBarText}>{'⚠ 无法连接服务器，当前显示的是离线数据。请检查网络后下拉刷新。'}</Text></View>:null}
+      ListEmptyComponent={<View style={styles.centered}><Text style={styles.emptyIcon}>{'🗺️'}</Text><Text style={styles.hint}>{loading?'加载中...':'暂无景点数据'}</Text>{!loading&&<View style={styles.refreshHint}><Text style={styles.subHint}>↓ 下拉刷新从服务器同步</Text></View>}</View>}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  list: { paddingVertical: Spacing.sm, paddingBottom: 100 },
-  emptyContainer: { flexGrow: 1, backgroundColor: Color.pageBg },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.pageH,
-  },
+  list: { paddingBottom: 100 },
+  header: { flexDirection: 'row', alignItems: 'center', marginHorizontal: Spacing.pageH, marginTop: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: Radius.md, backgroundColor: Color.cardBg, borderLeftWidth: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: Color.cardBorder },
+  headerText: { flex: 1, fontSize: 15, fontWeight: '700', color: Color.heading },
+  headerArrow: { fontSize: 12, color: Color.caption, transform: [{ rotate: '0deg' }] },
+  headerArrowOpen: { transform: [{ rotate: '90deg' }] },
+  spotRow: { flexDirection: 'row', alignItems: 'stretch', marginLeft: Spacing.pageH },
+  spotDot: { width: 4, marginRight: Spacing.md },
+  spotCardWrap: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.pageH, paddingTop: 120 },
   emptyIcon: { fontSize: 40, marginBottom: Spacing.md },
   hint: { fontSize: 16, fontWeight: '600', color: Color.heading },
-  refreshHint: {
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: 999,
-    backgroundColor: Color.primarySoft,
-  },
+  refreshHint: { marginTop: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 999, backgroundColor: Color.primarySoft },
   subHint: { fontSize: 13, color: Color.primary },
-  syncBar: {
-    marginHorizontal: Spacing.pageH,
-    marginTop: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    backgroundColor: Color.warningBg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(217,74,74,0.3)',
-  },
+  syncBar: { marginHorizontal: Spacing.pageH, marginTop: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Color.warningBg, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(217,74,74,0.3)' },
   syncBarText: { fontSize: 13, color: '#fff', fontWeight: '500', lineHeight: 19 },
 });

@@ -35,6 +35,7 @@ class SpotSerializer(serializers.ModelSerializer):
             'description': instance.description,
             'imageUrl': image_url,
             'audioUrl': audio_url,
+            'category': instance.category or 'architecture',
             'isActive': instance.is_active,
             'updatedAt': int(instance.updated_at.timestamp() * 1000) if instance.updated_at else None,
         }

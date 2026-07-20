@@ -15,7 +15,7 @@ const s = (
   triggerRadius: number, summary: string, description: string,
 ): Spot => ({
   id, name, lat, lng, triggerRadius, summary, description,
-  imageUrl: '', audioUrl: '', isActive: true, updatedAt: 0,
+  imageUrl: '', audioUrl: '', isActive: true, category: undefined, updatedAt: 0,
 });
 
 export const SEED_SPOTS: Spot[] = [

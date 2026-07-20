@@ -109,6 +109,7 @@ function rowToSpot(row: any): Spot {
     description: row.description,
     imageUrl: row.image_url,
     audioUrl: row.audio_url,
+    category: row.category || 'architecture',
     isActive: row.is_active === 1,
     updatedAt: row.updated_at,
   };

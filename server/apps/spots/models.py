@@ -28,6 +28,15 @@ class Spot(models.Model):
     name = models.CharField('景点名称', max_length=100)
     lat = models.FloatField('纬度（GCJ-02）')
     lng = models.FloatField('经度（GCJ-02）')
+    CATEGORY_CHOICES = [
+        ('college', '学院'),
+        ('nature', '自然景观'),
+        ('architecture', '特色建筑'),
+        ('teaching', '教学区'),
+        ('service', '生活服务'),
+        ('humanity', '人文景观'),
+    ]
+    category = models.CharField('分类', max_length=20, choices=CATEGORY_CHOICES, default='architecture')
     trigger_radius = models.IntegerField('触发半径（米）', default=50)
     summary = models.TextField('摘要', blank=True, default='')
     description = models.TextField('详细介绍')
