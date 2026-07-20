@@ -97,7 +97,7 @@ export default function MapScreen() {
       {amapReady && (
         <MapView
           style={styles.map}
-          initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 14, tilt: 0 }}
+          initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 15, tilt: 0 }}
           myLocationEnabled
           myLocationButtonEnabled={false}
           rotateGesturesEnabled={false}
