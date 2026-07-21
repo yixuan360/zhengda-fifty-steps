@@ -32,17 +32,17 @@ def _validate_file_mime(file, allowed_mimes, label):
 @admin.register(Spot)
 class SpotAdmin(admin.ModelAdmin):
     list_display = [
-        'id', 'name', 'lat', 'lng', 'trigger_radius',
+        'id', 'name', 'category', 'lat', 'lng', 'trigger_radius',
         'image_link', 'audio_link', 'is_active', 'updated_at',
     ]
-    list_filter = ['is_active']
+    list_filter = ['category', 'is_active']
     search_fields = ['name']
     ordering = ['id']
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         ('基本信息', {
-            'fields': ('name', 'lat', 'lng', 'trigger_radius'),
+            'fields': ('name', 'category', 'lat', 'lng', 'trigger_radius'),
         }),
         ('内容', {
             'fields': ('summary', 'description'),
