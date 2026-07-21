@@ -59,7 +59,7 @@ export async function replaceAllSpots(spots: Spot[]): Promise<void> {
     for (const s of spots) {
       await database.runAsync(
         `INSERT INTO spots (id, name, lat, lng, trigger_radius, summary, description, image_url, audio_url, category, is_active, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [s.id, s.name, s.lat, s.lng, s.triggerRadius, s.summary, s.description,
          s.imageUrl, s.audioUrl, s.category || '', s.isActive ? 1 : 0, s.updatedAt],
       );
