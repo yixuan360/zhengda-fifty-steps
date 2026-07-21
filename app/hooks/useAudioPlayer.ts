@@ -9,7 +9,7 @@
  *       不是 v3 的数字枚举。
  */
 import { useEffect, useRef } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useAudioStore } from '../stores/audioStore';
 import { ensureCacheSpace, ensureAudioDir } from '../services/cache';
 import type { PlaybackState } from '../types';
@@ -93,7 +93,7 @@ async function downloadToCache(url: string): Promise<string> {
   const info = await FileSystem.getInfoAsync(localPath);
   if (info.exists) return localPath;
   const result = await FileSystem.downloadAsync(url, localPath);
-  if (result.status !== 200) throw new Error(`下载失败: HTTP ${result.status}`);
+  if (result.status != 200) throw new Error(`下载失败: HTTP ${result.status}`);
   return localPath;
 }
 

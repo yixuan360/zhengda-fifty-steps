@@ -5,7 +5,7 @@
  * 策略：递归扫描 audio/ → 总大小超 500MB → 清空 audio/ 目录。
  * 不做 LRU、不分池、不做重试队列。
  */
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const CACHE_MAX_BYTES = 500 * 1024 * 1024;
 
