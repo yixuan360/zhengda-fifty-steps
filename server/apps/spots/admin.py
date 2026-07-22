@@ -32,11 +32,12 @@ def _validate_file_mime(file, allowed_mimes, label):
 @admin.register(Spot)
 class SpotAdmin(admin.ModelAdmin):
     list_display = [
-        'id', 'name', 'category', 'lat', 'lng', 'trigger_radius',
-        'image_link', 'audio_link', 'is_active', 'updated_at',
+        'id', 'image_thumb', 'name', 'category', 'lat', 'lng',
+        'trigger_radius', 'is_active', 'updated_at',
     ]
+    list_display_links = ['id', 'name']
     list_filter = ['category', 'is_active']
-    search_fields = ['name']
+    search_fields = ['name', 'summary', 'description']
     ordering = ['id']
     readonly_fields = ['created_at', 'updated_at']
 
@@ -59,22 +60,17 @@ class SpotAdmin(admin.ModelAdmin):
     # ── list_display 辅助方法 ─────────────────────────────
 
     @admin.display(description='图片')
-    def image_link(self, obj):
+    def image_thumb(self, obj):
         if obj.image and obj.image.name:
             return format_html(
-                '<a href="{}" target="_blank">查看图片</a>',
-                obj.image.url,
+                '<a href="{}" target="_blank">'
+                '<img src="{}" style="width:60px;height:45px;object-fit:cover;border-radius:4px;" />'
+                '</a>',
+                obj.image.url, obj.image.url,
             )
-        return '—'
-
-    @admin.display(description='音频')
-    def audio_link(self, obj):
-        if obj.audio and obj.audio.name:
-            return format_html(
-                '<a href="{}" target="_blank">试听音频</a>',
-                obj.audio.url,
-            )
-        return '—'
+        return format_html(
+            '<span style="color:#999;font-size:11px;">暂无图片</span>'
+        )
 
     # ── 文件保存 MIME 校验 ───────────────────────────────
 

@@ -41,6 +41,8 @@ export default function MapScreen() {
   const mockLocation = useTourStore((s) => s.mockLocation);
   const setMockLocation = useTourStore((s) => s.setMockLocation);
   const activeSpots = spots.filter((s) => s.isActive);
+  const syncStatus = useTourStore((s) => s.syncStatus);
+  const syncError = useTourStore((s) => s.syncError);
 
   useEffect(() => { initAMap().then(setAmapReady); }, []);
 
@@ -115,12 +117,24 @@ export default function MapScreen() {
       )}
 
       {/* ── 状态提示条 ── */}
-      {activeSpots.length === 0 && (
+      {syncStatus === 'syncing' && (
         <View style={[styles.bar, styles.barInfo, { top: insets.top + Spacing.md }]} pointerEvents="none">
-          <Text style={styles.barInfoText}>正在同步景点数据...</Text>
+          <Text style={styles.barInfoText}>⏳ 正在同步景点数据...</Text>
         </View>
       )}
-      {activeSpots.length > 0 && !isAccuracyGood && !mockLocation && (
+      {syncStatus === 'error' && activeSpots.length === 0 && (
+        <View style={[styles.bar, styles.barWarn, { top: insets.top + Spacing.md }]} pointerEvents="none">
+          <Text style={styles.barWarnText}>
+            {syncError ?? '⚠ 网络连接失败，请检查网络后下拉刷新'}
+          </Text>
+        </View>
+      )}
+      {syncStatus === 'done' && activeSpots.length === 0 && (
+        <View style={[styles.bar, styles.barInfo, { top: insets.top + Spacing.md }]} pointerEvents="none">
+          <Text style={styles.barInfoText}>📭 暂无景点数据，请在管理后台添加</Text>
+        </View>
+      )}
+      {syncStatus !== 'syncing' && !isAccuracyGood && !mockLocation && activeSpots.length > 0 && (
         <View style={[styles.bar, styles.barWarn, { top: insets.top + Spacing.md }]} pointerEvents="none">
           <Text style={styles.barWarnText}>⚠ 定位精度不足，自动触发已暂停</Text>
         </View>

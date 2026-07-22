@@ -4,6 +4,7 @@
  */
 import { fetchSpots, fetchConfig } from './api';
 import { replaceAllSpots, replaceAllConfig } from './database';
+import { useTourStore } from '../stores/tourStore';
 
 let isSyncing = false;
 
@@ -20,10 +21,15 @@ interface SyncResult {
  * - 配置：覆盖写入
  * - 网络失败：静默跳过，沿用 SQLite 旧数据
  * - 并发保护：isSyncing 标志位，重叠请求直接返回 { skipped: true }
+ * - 同步状态写入 tourStore，供 UI 展示进度
  */
 export async function syncAll(): Promise<SyncResult> {
   if (isSyncing) return { spotsOk: false, configOk: false, skipped: true };
   isSyncing = true;
+
+  const store = useTourStore.getState();
+  store.setSyncStatus('syncing');
+  store.setSyncError(null);
 
   const result: SyncResult = { spotsOk: false, configOk: false, skipped: false };
 
@@ -35,7 +41,7 @@ export async function syncAll(): Promise<SyncResult> {
         result.spotsOk = true;
       }
     } catch {
-      // 静默跳过，沿用本地数据
+      store.setSyncError('景点数据同步失败，使用本地缓存');
     }
 
     try {
@@ -48,7 +54,8 @@ export async function syncAll(): Promise<SyncResult> {
       // 静默跳过，沿用本地默认值
     }
   } finally {
-    isSyncing = false; // 任何路径都复位，避免锁死后续同步
+    isSyncing = false;
+    store.setSyncStatus(result.spotsOk ? 'done' : 'error');
   }
   return result;
 }

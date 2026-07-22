@@ -14,8 +14,12 @@ interface TourState {
   cooldowns: Record<number, number>;
   /** 所有景点数据（内存缓存，启动同步时写入） */
   spots: Spot[];
-  /** 同步状态 */
+  /** 同步状态（兼容旧字段） */
   isSyncing: boolean;
+  /** 同步详细状态 */
+  syncStatus: 'idle' | 'syncing' | 'done' | 'error';
+  /** 同步错误信息 */
+  syncError: string | null;
   /** 用户位置（GCJ-02） */
   userLocation: { lat: number; lng: number } | null;
   /** 定位精度是否足够 */
@@ -33,6 +37,8 @@ interface TourState {
   isInCooldown: (spotId: number) => boolean;
   setSpots: (spots: Spot[]) => void;
   setIsSyncing: (v: boolean) => void;
+  setSyncStatus: (status: TourState['syncStatus']) => void;
+  setSyncError: (err: string | null) => void;
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
   setIsAccuracyGood: (v: boolean) => void;
   /** 设置模拟定位；传 null 清除，恢复真实 GPS */
@@ -48,6 +54,8 @@ export const useTourStore = create<TourState>((set, get) => ({
   cooldowns: {},
   spots: [],
   isSyncing: false,
+  syncStatus: 'idle',
+  syncError: null,
   userLocation: null,
   isAccuracyGood: false,
   mockLocation: null,
@@ -77,6 +85,8 @@ export const useTourStore = create<TourState>((set, get) => ({
 
   setSpots: (spots) => set({ spots }),
   setIsSyncing: (v) => set({ isSyncing: v }),
+  setSyncStatus: (status) => set({ syncStatus: status }),
+  setSyncError: (err) => set({ syncError: err }),
   setUserLocation: (loc) => set({ userLocation: loc }),
   setIsAccuracyGood: (v) => set({ isAccuracyGood: v }),
   setMockLocation: (loc) => set({ mockLocation: loc }),

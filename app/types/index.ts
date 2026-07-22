@@ -65,3 +65,15 @@ export interface HitSpot {
 
 /** 全局配置 key-value */
 export type GlobalConfig = Record<string, unknown>;
+
+/** 版本检查 */
+export interface VersionData {
+  versionCode: number;
+  downloadUrl: string;
+}
+
+/** 设备心跳 */
+export interface PingData {
+  todayDevices: number;
+  weekDevices: number;
+}

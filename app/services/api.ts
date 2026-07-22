@@ -4,7 +4,7 @@
  */
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import type { ApiResponse, SpotListData, GlobalConfig, AuthData } from '../types';
+import type { ApiResponse, SpotListData, GlobalConfig, AuthData, VersionData, PingData } from '../types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
@@ -103,6 +103,18 @@ export async function fetchConfig(): Promise<ApiResponse<GlobalConfig>> {
 /** 微信登录 */
 export async function wechatLogin(code: string): Promise<ApiResponse<AuthData>> {
   const { data } = await api.post<ApiResponse<AuthData>>('/api/v1/auth/wechat-login/', { code });
+  return data;
+}
+
+/** 检查 App 版本 */
+export async function fetchVersion(): Promise<ApiResponse<VersionData>> {
+  const { data } = await api.get<ApiResponse<VersionData>>('/api/v1/config/version/');
+  return data;
+}
+
+/** 匿名设备心跳 */
+export async function sendPing(deviceId: string, version: string): Promise<ApiResponse<PingData>> {
+  const { data } = await api.post<ApiResponse<PingData>>('/api/v1/config/ping/', { deviceId, version });
   return data;
 }
 

@@ -7,11 +7,14 @@ from django.db import models
 
 
 def _spot_upload_path(instance, filename, folder):
-    """生成上传路径：media/<folder>/<spot_id>_<timestamp>_<uuid>.<ext>"""
+    """生成上传路径：media/<folder>/<timestamp>_<uuid>.<ext>
+    不依赖 instance.id（新建景点时 id 为 None），改用 UUID 保证唯一性。
+    """
     import time
     ext = filename.split('.')[-1] if '.' in filename else 'bin'
-    uid = uuid.uuid4().hex[:6]
-    return f'{folder}/{instance.id}_{int(time.time())}_{uid}.{ext}'
+    uid = uuid.uuid4().hex[:8]
+    ts = int(time.time())
+    return f'{folder}/{ts}_{uid}.{ext}'
 
 
 def image_upload_path(instance, filename):

@@ -1,6 +1,5 @@
 """
-全局配置 — GlobalConfig 模型（v4.0 §8.1）
-key-value 结构，value 使用 JSON 类型。
+全局配置 — GlobalConfig + DevicePing 模型
 """
 from django.db import models
 
@@ -19,3 +18,23 @@ class GlobalConfig(models.Model):
 
     def __str__(self):
         return self.key
+
+
+class DevicePing(models.Model):
+    """设备心跳 — 匿名统计日活设备数"""
+
+    device_id = models.CharField('设备标识', max_length=64)
+    app_version = models.CharField('App 版本', max_length=20, default='1.0.0')
+    created_at = models.DateTimeField('首次访问', auto_now_add=True)
+
+    class Meta:
+        db_table = 'device_pings'
+        verbose_name = '设备访问记录'
+        verbose_name_plural = '设备访问记录'
+        indexes = [
+            models.Index(fields=['device_id']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.device_id} @ {self.created_at.strftime("%m-%d %H:%M")}'
