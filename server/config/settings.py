@@ -157,12 +157,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # 修改 Admin 路径（v4.0 §4.3），非默认值
 ADMIN_URL = env_config('ADMIN_URL', default='manage/')
 
-# ── 生产安全（DEBUG=False 时自动启用）───────────────
-# 部署到 ECS + Nginx 后，以下配置自动生效
-if not DEBUG:
-    CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# ── 生产安全 ──────────────────────────────────────────
+# V1 未配 HTTPS，Secure Cookie 关闭；配好 SSL 后改为 True
+CSRF_COOKIE_SECURE = env_config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+SESSION_COOKIE_SECURE = env_config('SESSION_COOKIE_SECURE', default=False, cast=bool)
 
 # Django 4.2+ 要求：通过 HTTPS 访问 Admin 时必须配置
 CSRF_TRUSTED_ORIGINS = env_config(
