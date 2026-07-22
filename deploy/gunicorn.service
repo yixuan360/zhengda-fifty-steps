@@ -1,0 +1,28 @@
+# 郑大五十步 — Gunicorn systemd 服务
+# 部署路径：/etc/systemd/system/gunicorn-zhengda.service
+# 启动：sudo systemctl start gunicorn-zhengda
+# 开机自启：sudo systemctl enable gunicorn-zhengda
+# 查看状态：sudo systemctl status gunicorn-zhengda
+# 查看日志：sudo journalctl -u gunicorn-zhengda -f
+
+[Unit]
+Description=郑大五十步 Gunicorn
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/opt/zhengda-fifty-steps/server
+ExecStart=/opt/zhengda-fifty-steps/server/venv/bin/gunicorn \
+    --workers 2 \
+    --bind 127.0.0.1:8000 \
+    --timeout 60 \
+    --access-logfile /var/log/zhengda-gunicorn-access.log \
+    --error-logfile /var/log/zhengda-gunicorn-error.log \
+    config.wsgi:application
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
