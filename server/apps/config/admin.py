@@ -20,7 +20,7 @@ class GlobalConfigAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['sort_order', 'key', 'label', 'color_swatch']
+    list_display = ['sort_order', 'key', 'label', 'color', 'color_swatch']
     list_display_links = ['label']
     list_editable = ['sort_order', 'color']
     search_fields = ['key', 'label']
