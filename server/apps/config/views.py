@@ -4,7 +4,7 @@
 import uuid
 import hashlib
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 from django.db.utils import IntegrityError
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -42,10 +42,10 @@ class VersionView(APIView):
                     logger.warning('app_version_code is not an integer: %s', cfg['value'])
             elif cfg['key'] == 'app_download_url':
                 v = cfg['value']
-                if isinstance(v, str) and v.startswith('https://'):
+                if isinstance(v, str) and v.startswith(('http://', 'https://')):
                     download_url = v
                 elif v:
-                    logger.warning('app_download_url is not a valid https URL: %s', v)
+                    logger.warning('app_download_url is not a valid URL: %s', v)
         return Response({
             'ok': True,
             'data': {'versionCode': version_code, 'downloadUrl': download_url},

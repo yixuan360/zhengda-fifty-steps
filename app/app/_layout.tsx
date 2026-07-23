@@ -66,7 +66,7 @@ export default function RootLayout() {
         const verRes = await fetchVersion();
         if (verRes.ok && verRes.data.versionCode > APP_VERSION_CODE) {
           const hasUrl = typeof verRes.data.downloadUrl === 'string'
-            && verRes.data.downloadUrl.startsWith('https://');
+            && /^https?:\/\//.test(verRes.data.downloadUrl);
           Alert.alert(
             '发现新版本',
             hasUrl ? '有新版本可用，是否前往下载？' : '有新版本可用，请联系管理员获取安装包',
@@ -87,9 +87,6 @@ export default function RootLayout() {
       } catch { /* 心跳静默失败 */ }
     })();
   }, []);
-
-  // ------ 返回清理函数，防止组件卸载后 Alert / Linking 泄漏 ------
-  useEffect(() => () => { deviceIdPromise = null; }, []);
 
   return (
     <View style={styles.root}>

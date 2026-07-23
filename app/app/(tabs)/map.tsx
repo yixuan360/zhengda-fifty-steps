@@ -44,7 +44,11 @@ export default function MapScreen() {
   const syncError = useTourStore((s) => s.syncError);
   const activeSpots = spots.filter((s) => s.isActive);
 
-  useEffect(() => { initAMap().then(setAmapReady); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    initAMap().then((ready) => { if (!cancelled) setAmapReady(ready); });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── 模拟定位面板：5 击触发 ──
   const [mockVisible, setMockVisible] = useState(false);
@@ -127,10 +131,10 @@ export default function MapScreen() {
           <Text style={styles.barInfoText}>⏳ 正在同步景点数据...</Text>
         </View>
       )}
-      {syncStatus === 'error' && activeSpots.length === 0 && (
-        <View style={[styles.bar, styles.barWarn, { top: insets.top + Spacing.md }]} pointerEvents="none">
-          <Text style={styles.barWarnText}>
-            {syncError ?? '⚠ 网络连接失败，请检查网络后下拉刷新'}
+      {syncStatus === 'error' && (
+        <View style={[styles.bar, activeSpots.length === 0 ? styles.barWarn : styles.barInfo, { top: insets.top + Spacing.md }]} pointerEvents="none">
+          <Text style={activeSpots.length === 0 ? styles.barWarnText : styles.barInfoText}>
+            {syncError ?? (activeSpots.length === 0 ? '⚠ 网络连接失败，请检查网络后下拉刷新' : '⚠ 同步失败，显示的是缓存数据')}
           </Text>
         </View>
       )}
