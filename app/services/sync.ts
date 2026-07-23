@@ -55,7 +55,12 @@ export async function syncAll(): Promise<SyncResult> {
     }
   } finally {
     isSyncing = false;
-    store.setSyncStatus(result.spotsOk ? 'done' : 'error');
+    if (result.spotsOk) {
+      store.setSyncStatus('done');
+    } else {
+      store.setSyncStatus('error');
+      if (!store.getState().syncError) store.setSyncError('景点数据同步失败，使用本地缓存');
+    }
   }
   return result;
 }

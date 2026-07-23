@@ -25,7 +25,7 @@ class DevicePing(models.Model):
 
     device_id = models.CharField('设备标识', max_length=64)
     app_version = models.CharField('App 版本', max_length=20, default='1.0.0')
-    created_at = models.DateTimeField('首次访问', auto_now_add=True)
+    created_at = models.DateTimeField('记录时间', auto_now_add=True)
 
     class Meta:
         db_table = 'device_pings'
@@ -34,6 +34,9 @@ class DevicePing(models.Model):
         indexes = [
             models.Index(fields=['device_id']),
             models.Index(fields=['created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['device_id', 'created_at'], name='dp_dev_date_uq'),
         ]
 
     def __str__(self):

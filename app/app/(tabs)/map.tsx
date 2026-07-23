@@ -40,9 +40,9 @@ export default function MapScreen() {
   const spots = useTourStore((s) => s.spots);
   const mockLocation = useTourStore((s) => s.mockLocation);
   const setMockLocation = useTourStore((s) => s.setMockLocation);
-  const activeSpots = spots.filter((s) => s.isActive);
   const syncStatus = useTourStore((s) => s.syncStatus);
   const syncError = useTourStore((s) => s.syncError);
+  const activeSpots = spots.filter((s) => s.isActive);
 
   useEffect(() => { initAMap().then(setAmapReady); }, []);
 
@@ -117,6 +117,11 @@ export default function MapScreen() {
       )}
 
       {/* ── 状态提示条 ── */}
+      {syncStatus === 'idle' && activeSpots.length === 0 && (
+        <View style={[styles.bar, styles.barInfo, { top: insets.top + Spacing.md }]} pointerEvents="none">
+          <Text style={styles.barInfoText}>⏳ 正在加载景点数据...</Text>
+        </View>
+      )}
       {syncStatus === 'syncing' && (
         <View style={[styles.bar, styles.barInfo, { top: insets.top + Spacing.md }]} pointerEvents="none">
           <Text style={styles.barInfoText}>⏳ 正在同步景点数据...</Text>
@@ -139,7 +144,7 @@ export default function MapScreen() {
           <Text style={styles.barWarnText}>⚠ 定位精度不足，自动触发已暂停</Text>
         </View>
       )}
-      {mockLocation && (
+      {mockLocation && syncStatus !== 'syncing' && (
         <View style={[styles.bar, styles.barMock, { top: insets.top + Spacing.md }]} pointerEvents="none">
           <Text style={styles.barMockText}>
             🧪 模拟定位中：{mockLocation.lat.toFixed(5)}, {mockLocation.lng.toFixed(5)}（精度固定 5m）

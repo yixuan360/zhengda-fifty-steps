@@ -33,7 +33,7 @@ def _validate_file_mime(file, allowed_mimes, label):
 class SpotAdmin(admin.ModelAdmin):
     list_display = [
         'id', 'image_thumb', 'name', 'category', 'lat', 'lng',
-        'trigger_radius', 'is_active', 'updated_at',
+        'trigger_radius', 'audio_link', 'is_active', 'updated_at',
     ]
     list_display_links = ['id', 'name']
     list_filter = ['category', 'is_active']
@@ -63,7 +63,7 @@ class SpotAdmin(admin.ModelAdmin):
     def image_thumb(self, obj):
         if obj.image and obj.image.name:
             return format_html(
-                '<a href="{}" target="_blank">'
+                '<a href="{}" target="_blank" rel="noopener noreferrer">'
                 '<img src="{}" style="width:60px;height:45px;object-fit:cover;border-radius:4px;" />'
                 '</a>',
                 obj.image.url, obj.image.url,
@@ -71,6 +71,15 @@ class SpotAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="color:#999;font-size:11px;">暂无图片</span>'
         )
+
+    @admin.display(description='音频')
+    def audio_link(self, obj):
+        if obj.audio and obj.audio.name:
+            return format_html(
+                '<a href="{}" target="_blank" rel="noopener noreferrer">试听</a>',
+                obj.audio.url,
+            )
+        return '—'
 
     # ── 文件保存 MIME 校验 ───────────────────────────────
 
