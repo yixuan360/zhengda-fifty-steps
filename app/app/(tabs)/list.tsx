@@ -16,10 +16,10 @@ interface Section { key: string; title: string; color: string; data: Spot[]; exp
 type FlatItem = { type: 'header'; key: string; section: Section } | { type: 'spot'; key: string; spot: Spot; color: string };
 
 export default function ListScreen() {
-  const { spots, setSpots, userLocation } = useTourStore();
+  const { spots, setSpots, userLocation, syncStatus, syncError } = useTourStore();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [syncFailed, setSyncFailed] = useState<boolean|null>(null);
+  const [localSyncFailed, setLocalSyncFailed] = useState<boolean|null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['college']));
 
   const loadData = useCallback(async () => { try { setSpots(await getAllSpots()); } finally { setLoading(false); } }, [setSpots]);
@@ -27,9 +27,12 @@ export default function ListScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try { const r = await syncAll(); setSyncFailed(!r.spotsOk); } catch { setSyncFailed(true); }
+    try { const r = await syncAll(); setLocalSyncFailed(!r.spotsOk); } catch { setLocalSyncFailed(true); }
     await loadData(); setRefreshing(false);
   }, [loadData]);
+
+  const showSyncError = localSyncFailed || syncStatus === 'error';
+  const syncErrorMessage = syncError || '⚠ 无法连接服务器，请检查网络后下拉刷新';
 
   const toggleSection = (key: string) => setExpandedSections(p => { const n=new Set(p); n.has(key)?n.delete(key):n.add(key); return n; });
 
@@ -58,7 +61,7 @@ export default function ListScreen() {
       }}
       style={{backgroundColor:Color.pageBg}} contentContainerStyle={styles.list}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Color.primary]} tintColor={Color.primary} progressBackgroundColor='#FFFFFF'/>}
-      ListHeaderComponent={syncFailed===true?<View style={styles.syncBar}><Text style={styles.syncBarText}>{'⚠ 无法连接服务器，当前显示的是离线数据。请检查网络后下拉刷新。'}</Text></View>:null}
+      ListHeaderComponent={showSyncError?<View style={styles.syncBar}><Text style={styles.syncBarText}>{syncErrorMessage}</Text></View>:null}
       ListEmptyComponent={<View style={styles.centered}><Text style={styles.emptyIcon}>{'🗺️'}</Text><Text style={styles.hint}>{loading?'加载中...':'暂无景点数据'}</Text>{!loading&&<View style={styles.refreshHint}><Text style={styles.subHint}>↓ 下拉刷新从服务器同步</Text></View>}</View>}
     />
   );

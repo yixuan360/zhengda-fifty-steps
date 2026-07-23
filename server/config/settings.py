@@ -168,3 +168,10 @@ CSRF_TRUSTED_ORIGINS = env_config(
     default='',
     cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
 )
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
+}
