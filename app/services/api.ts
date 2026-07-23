@@ -4,7 +4,7 @@
  */
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import type { ApiResponse, SpotListData, GlobalConfig, AuthData, VersionData, PingData } from '../types';
+import type { ApiResponse, SpotListData, GlobalConfig, AuthData, VersionData, PingData, CategoryListData } from '../types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
@@ -115,6 +115,12 @@ export async function fetchVersion(): Promise<ApiResponse<VersionData>> {
 /** 匿名设备心跳 */
 export async function sendPing(deviceId: string, version: string): Promise<ApiResponse<PingData>> {
   const { data } = await api.post<ApiResponse<PingData>>('/api/v1/config/ping/', { deviceId, version });
+  return data;
+}
+
+/** 拉取景点分类 */
+export async function fetchCategories(): Promise<ApiResponse<CategoryListData>> {
+  const { data } = await api.get<ApiResponse<CategoryListData>>('/api/v1/config/categories/');
   return data;
 }
 

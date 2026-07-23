@@ -10,7 +10,7 @@ import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useAuth } from '../hooks/useAuth';
 import { syncAll } from '../services/sync';
 import { getAllSpots, seedFresh } from '../services/database';
-import { fetchVersion, sendPing } from '../services/api';
+import { fetchVersion, sendPing, fetchCategories } from '../services/api';
 import { SEED_SPOTS } from '../constants/seedSpots';
 import { useTourStore } from '../stores/tourStore';
 import AudioBar from '../components/AudioBar';
@@ -61,7 +61,15 @@ export default function RootLayout() {
         useTourStore.getState().setSpots(await getAllSpots());
       } catch (err) { console.warn('[Layout] syncAll fail:', err); }
 
-      // 3. 版本检查
+      // 3. 拉取分类（失败则用内置默认值）
+      try {
+        const catRes = await fetchCategories();
+        if (catRes.ok && catRes.data.categories?.length) {
+          useTourStore.getState().setCategories(catRes.data.categories);
+        }
+      } catch { /* 分类拉取失败，使用 theme.ts 常量兜底 */ }
+
+      // 4. 版本检查
       try {
         const verRes = await fetchVersion();
         if (verRes.ok && verRes.data.versionCode > APP_VERSION_CODE) {

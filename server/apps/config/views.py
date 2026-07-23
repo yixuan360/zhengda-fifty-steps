@@ -1,5 +1,5 @@
 """
-全局配置 + 版本检查 + 设备心跳 — View
+全局配置 + 版本检查 + 设备心跳 + 分类 — View
 """
 import uuid
 import hashlib
@@ -9,7 +9,7 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import GlobalConfig, DevicePing
+from .models import GlobalConfig, Category, DevicePing
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +84,18 @@ class PingView(APIView):
             'data': {'todayDevices': today_count, 'weekDevices': week_count},
             'message': '',
         })
+
+
+class CategoriesView(APIView):
+    """GET /api/v1/categories/ — 返回全部分类"""
+    permission_classes = []
+
+    def get(self, request):
+        cats = Category.objects.all().order_by('sort_order')
+        data = [{
+            'key': c.key,
+            'label': c.label,
+            'color': c.color,
+            'sortOrder': c.sort_order,
+        } for c in cats]
+        return Response({'ok': True, 'data': {'categories': data}, 'message': ''})

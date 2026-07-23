@@ -72,7 +72,18 @@ export interface VersionData {
   downloadUrl: string;
 }
 
-/** 设备心跳 */
+/** 景点分类 */
+export interface CategoryInfo {
+  key: string;
+  label: string;
+  color: string;
+  sortOrder: number;
+}
+
+export interface CategoryListData {
+  categories: CategoryInfo[];
+}
+
 export interface PingData {
   todayDevices: number;
   weekDevices: number;

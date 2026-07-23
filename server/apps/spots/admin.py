@@ -9,7 +9,9 @@ from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils.html import format_html
+from django import forms
 from .models import Spot
+from apps.config.models import Category
 
 # ── MIME 白名单 ──────────────────────────────────────────
 ALLOWED_IMAGE_MIME = {'image/png', 'image/jpeg', 'image/webp'}
@@ -40,6 +42,16 @@ class SpotAdmin(admin.ModelAdmin):
     search_fields = ['name', 'summary', 'description']
     ordering = ['id']
     readonly_fields = ['created_at', 'updated_at']
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        cats = Category.objects.all().order_by('sort_order')
+        form.base_fields['category'] = forms.ChoiceField(
+            label='分类',
+            choices=[(c.key, c.label) for c in cats] or [('architecture', '默认')],
+            initial='architecture',
+        )
+        return form
 
     fieldsets = (
         ('基本信息', {

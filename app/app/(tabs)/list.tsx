@@ -9,14 +9,17 @@ import { getAllSpots } from '../../services/database';
 import { syncAll } from '../../services/sync';
 import { haversineDistance } from '../../utils/distance';
 import { useTourStore } from '../../stores/tourStore';
-import { Color, Spacing, Radius, CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ORDER } from '../../constants/theme';
+import { Color, Spacing, Radius, CATEGORY_COLORS as FALLBACK_COLORS, CATEGORY_LABELS as FALLBACK_LABELS, CATEGORY_ORDER as FALLBACK_ORDER } from '../../constants/theme';
 import type { Spot } from '../../types';
 
 interface Section { key: string; title: string; color: string; data: Spot[]; expanded: boolean }
 type FlatItem = { type: 'header'; key: string; section: Section } | { type: 'spot'; key: string; spot: Spot; color: string };
 
 export default function ListScreen() {
-  const { spots, setSpots, userLocation, syncStatus, syncError } = useTourStore();
+  const { spots, setSpots, userLocation, syncStatus, syncError, categories } = useTourStore();
+  const catColors: Record<string,string> = categories.length ? Object.fromEntries(categories.map(c=>[c.key,c.color])) : FALLBACK_COLORS;
+  const catLabels: Record<string,string> = categories.length ? Object.fromEntries(categories.map(c=>[c.key,c.label])) : FALLBACK_LABELS;
+  const catOrder = categories.length ? categories.sort((a,b)=>a.sortOrder-b.sortOrder).map(c=>c.key) : FALLBACK_ORDER;
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [localSyncFailed, setLocalSyncFailed] = useState<boolean|null>(null);
@@ -40,7 +43,7 @@ export default function ListScreen() {
   for (const s of spots) { const cat = s.category||'architecture'; (grouped[cat]??=[]).push(s); }
   for (const key of Object.keys(grouped)) grouped[key].sort((a,b) => userLocation ? haversineDistance(userLocation,{lat:a.lat,lng:a.lng})-haversineDistance(userLocation,{lat:b.lat,lng:b.lng}) : a.name.localeCompare(b.name,'zh'));
 
-  const sections: Section[] = CATEGORY_ORDER.filter(k=>grouped[k]?.length).map(k=>({key:k,title:CATEGORY_LABELS[k]||k,color:CATEGORY_COLORS[k]||'#999',data:grouped[k],expanded:expandedSections.has(k)}));
+  const sections: Section[] = catOrder.filter(k=>grouped[k]?.length).map(k=>({key:k,title:catLabels[k]||k,color:catColors[k]||'#999',data:grouped[k],expanded:expandedSections.has(k)}));
   const flatData: FlatItem[] = [];
   for (const sec of sections) { flatData.push({type:'header',key:'h-'+sec.key,section:sec}); if (sec.expanded) for (const s of sec.data) flatData.push({type:'spot',key:'s-'+s.id,spot:s,color:sec.color}); }
 

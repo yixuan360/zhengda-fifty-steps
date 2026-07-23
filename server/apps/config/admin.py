@@ -4,7 +4,7 @@
 from datetime import date, timedelta
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import GlobalConfig, DevicePing
+from .models import GlobalConfig, Category, DevicePing
 
 
 @admin.register(GlobalConfig)
@@ -16,6 +16,22 @@ class GlobalConfigAdmin(admin.ModelAdmin):
     def value_summary(self, obj):
         val = str(obj.value)
         return val[:80] + ('...' if len(val) > 80 else '')
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['sort_order', 'key', 'label', 'color_swatch']
+    list_display_links = ['label']
+    list_editable = ['sort_order', 'color']
+    search_fields = ['key', 'label']
+    ordering = ['sort_order']
+
+    @admin.display(description='预览')
+    def color_swatch(self, obj):
+        return format_html(
+            '<span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{};vertical-align:middle;"></span> {}',
+            obj.color, obj.color,
+        )
 
 
 @admin.register(DevicePing)

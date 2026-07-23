@@ -1,35 +1,23 @@
 /**
  * 导览状态 — Zustand Store
- * v4.0 §6.1：useTour 导览引擎状态管理
  */
 import { create } from 'zustand';
-import type { Spot, HitSpot } from '../types';
+import type { Spot, HitSpot, CategoryInfo } from '../types';
 
 interface TourState {
-  /** 当前已命中（待播放/播放中）的景点 */
   currentHit: HitSpot | null;
-  /** 播放队列（多个景点同时命中时排队） */
   queue: HitSpot[];
-  /** 冷却中的景点 ID 集合（key: spotId, value: 冷却到期时间戳） */
   cooldowns: Record<number, number>;
-  /** 所有景点数据（内存缓存，启动同步时写入） */
   spots: Spot[];
-  /** 同步状态（兼容旧字段） */
   isSyncing: boolean;
-  /** 同步详细状态 */
   syncStatus: 'idle' | 'syncing' | 'done' | 'error';
-  /** 同步错误信息 */
   syncError: string | null;
-  /** 用户位置（GCJ-02） */
   userLocation: { lat: number; lng: number } | null;
-  /** 定位精度是否足够 */
   isAccuracyGood: boolean;
-  /** 模拟定位（GCJ-02），非 null 时 useUserLocation 优先返回此值并标记精度合格 */
   mockLocation: { lat: number; lng: number } | null;
-  /** 播放中命中新景点的弱提示文本，AudioBar 消费后清空 */
   newSpotHint: string | null;
+  categories: CategoryInfo[];
 
-  // Actions
   setCurrentHit: (hit: HitSpot | null) => void;
   enqueue: (hit: HitSpot) => void;
   dequeue: () => HitSpot | undefined;
@@ -41,11 +29,10 @@ interface TourState {
   setSyncError: (err: string | null) => void;
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
   setIsAccuracyGood: (v: boolean) => void;
-  /** 设置模拟定位；传 null 清除，恢复真实 GPS */
   setMockLocation: (loc: { lat: number; lng: number } | null) => void;
   setNewSpotHint: (hint: string | null) => void;
-  /** 用户确认切换：出队并返回下一个景点，供 AudioBar/getPlayer 使用 */
   switchToNext: () => HitSpot | undefined;
+  setCategories: (cats: CategoryInfo[]) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -60,11 +47,10 @@ export const useTourStore = create<TourState>((set, get) => ({
   isAccuracyGood: false,
   mockLocation: null,
   newSpotHint: null,
+  categories: [],
 
   setCurrentHit: (hit) => set({ currentHit: hit }),
-
   enqueue: (hit) => set((s) => ({ queue: [...s.queue, hit] })),
-
   dequeue: () => {
     const { queue } = get();
     if (queue.length === 0) return undefined;
@@ -72,17 +58,12 @@ export const useTourStore = create<TourState>((set, get) => ({
     set({ queue: rest });
     return next;
   },
-
   setCooldown: (spotId) =>
-    set((s) => ({
-      cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 },
-    })),
-
+    set((s) => ({ cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 } })),
   isInCooldown: (spotId) => {
     const until = get().cooldowns[spotId];
     return until != null && Date.now() < until;
   },
-
   setSpots: (spots) => set({ spots }),
   setIsSyncing: (v) => set({ isSyncing: v }),
   setSyncStatus: (status) => set({ syncStatus: status }),
@@ -98,4 +79,5 @@ export const useTourStore = create<TourState>((set, get) => ({
     set({ queue: rest });
     return next;
   },
+  setCategories: (cats) => set({ categories: cats }),
 }));
