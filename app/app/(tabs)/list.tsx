@@ -17,9 +17,20 @@ type FlatItem = { type: 'header'; key: string; section: Section } | { type: 'spo
 
 export default function ListScreen() {
   const { spots, setSpots, userLocation, syncStatus, syncError, categories } = useTourStore();
-  const catColors: Record<string,string> = categories.length ? Object.fromEntries(categories.map(c=>[c.key,c.color])) : FALLBACK_COLORS;
-  const catLabels: Record<string,string> = categories.length ? Object.fromEntries(categories.map(c=>[c.key,c.label])) : FALLBACK_LABELS;
-  const catOrder = categories.length ? [...categories].sort((a,b)=>a.sortOrder-b.sortOrder).map(c=>c.key) : FALLBACK_ORDER;
+  const apiCats = categories.length;
+  const catColors: Record<string,string> = apiCats
+    ? Object.fromEntries(categories.map(c=>[c.key,c.color]))
+    : { ...FALLBACK_COLORS };
+  const catLabels: Record<string,string> = apiCats
+    ? Object.fromEntries(categories.map(c=>[c.key,c.label]))
+    : { ...FALLBACK_LABELS };
+  const catOrder = apiCats
+    ? [...categories].sort((a,b)=>a.sortOrder-b.sortOrder).map(c=>c.key)
+    : ((prefix: string[]) => {
+        const extra = new Set<string>();
+        for (const s of spots) { const k = s.category || ''; if (k && !prefix.includes(k)) extra.add(k); }
+        return [...prefix, ...extra];
+      })(FALLBACK_ORDER);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [localSyncFailed, setLocalSyncFailed] = useState<boolean|null>(null);
