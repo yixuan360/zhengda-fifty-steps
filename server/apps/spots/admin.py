@@ -46,10 +46,13 @@ class SpotAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         cats = Category.objects.all().order_by('sort_order')
+        choices = [(c.key, c.label) for c in cats] or [('architecture', '默认')]
+        if obj and obj.category:
+            seen = {k for k, _ in choices}
+            if obj.category not in seen:
+                choices.insert(0, (obj.category, f'{obj.category}（已删除）'))
         form.base_fields['category'] = forms.ChoiceField(
-            label='分类',
-            choices=[(c.key, c.label) for c in cats] or [('architecture', '默认')],
-            initial='architecture',
+            label='分类', choices=choices, initial='architecture',
         )
         return form
 
