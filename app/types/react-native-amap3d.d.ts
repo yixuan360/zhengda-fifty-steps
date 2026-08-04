@@ -53,6 +53,18 @@ declare module 'react-native-amap3d' {
 
   export class Marker extends React.Component<MarkerProps> {}
 
+  export interface CircleProps {
+    center: LatLng;
+    /** 半径（米） */
+    radius: number;
+    strokeWidth?: number;
+    strokeColor?: string;
+    fillColor?: string;
+    zIndex?: number;
+  }
+
+  export class Circle extends React.Component<CircleProps> {}
+
   export namespace AMapSdk {
     function init(apiKey?: string): void;
     function getVersion(): Promise<string>;

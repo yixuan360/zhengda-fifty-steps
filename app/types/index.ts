@@ -56,6 +56,14 @@ export interface AuthData {
 /** 播放状态 */
 export type PlaybackState = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
+/**
+ * 定位精度档位（三档分级）
+ * good ≤ 30m：正常触发，无提示
+ * fair 30~50m：可触发，横幅提示
+ * poor > 50m：暂停触发，横幅提示
+ */
+export type AccuracyLevel = 'good' | 'fair' | 'poor';
+
 /** 命中景点（导览引擎触发结果） */
 export interface HitSpot {
   spot: Spot;

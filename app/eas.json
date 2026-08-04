@@ -10,7 +10,8 @@
       },
       "env": {
         "EXPO_PUBLIC_AMAP_ANDROID_KEY": "e7171cce2b78edd39bbd690b0be83ab3",
-        "EXPO_PUBLIC_API_BASE_URL": "http://123.57.94.91"
+        "EXPO_PUBLIC_API_BASE_URL": "http://123.57.94.91",
+        "EXPO_PUBLIC_ENABLE_DEBUG": "true"
       }
     },
     "production": {

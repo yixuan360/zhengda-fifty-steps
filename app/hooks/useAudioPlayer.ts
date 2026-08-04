@@ -98,17 +98,30 @@ async function downloadToCache(url: string): Promise<string> {
 }
 
 // ─── 播放器 ─────────────────────────────────────────────
+/**
+ * play 代次 token：stop() 会递增它。play() 在异步下载完成后校验代次，
+ * 若期间被 stop（或又被新的 play 取代），则放弃 TrackPlayer.play()，
+ * 避免"加载中停止后音频仍响起"的幽灵播放（审查 MEDIUM-1）。
+ */
+let playGeneration = 0;
+
 export function getPlayer() {
   return {
     async play(url: string, spotName: string, spotId?: number): Promise<void> {
       if (!loadRNTP()) return;
       await ensurePlayerReady();
       const store = useAudioStore.getState();
-      store.setTrack(url, spotName);
+      store.setTrack(url, spotName, spotId);
       store.setManuallyStopped(false);
       try {
         store.setState('loading');
+        const gen = ++playGeneration;
         const localUri = await downloadToCache(url);
+        if (gen !== playGeneration) {
+          // 下载期间被 stop() 或新的 play() 取代 → 丢弃本次播放
+          await TrackPlayer.reset();
+          return;
+        }
         await TrackPlayer.reset();
         await TrackPlayer.add({ id: spotId != null ? String(spotId) : spotName, url: localUri, title: spotName });
         await TrackPlayer.play();
@@ -116,7 +129,7 @@ export function getPlayer() {
     },
     pause:  () => { if (loadRNTP()) TrackPlayer.pause(); },
     resume: () => { if (loadRNTP()) TrackPlayer.play(); },
-    stop:   () => { if (loadRNTP()) TrackPlayer.reset(); useAudioStore.getState().reset(); },
+    stop:   () => { playGeneration += 1; if (loadRNTP()) TrackPlayer.reset(); useAudioStore.getState().reset(); },
     seekTo: (s: number) => { if (loadRNTP()) TrackPlayer.seekTo(s); },
   };
 }

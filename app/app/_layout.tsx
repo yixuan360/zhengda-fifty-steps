@@ -13,7 +13,8 @@ import { getAllSpots, seedFresh } from '../services/database';
 import { fetchVersion, sendPing, fetchCategories } from '../services/api';
 import { SEED_SPOTS } from '../constants/seedSpots';
 import { useTourStore } from '../stores/tourStore';
-import AudioBar from '../components/AudioBar';
+import TriggerCard from '../components/TriggerCard';
+import AppToast from '../components/AppToast';
 
 const APP_VERSION_CODE = 1;
 const DEVICE_ID_KEY = '@zhengda_device_id';
@@ -109,7 +110,8 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-      <AudioBar />
+      <TriggerCard />
+      <AppToast />
     </View>
   );
 }

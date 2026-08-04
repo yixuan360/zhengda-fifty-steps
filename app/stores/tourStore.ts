@@ -2,7 +2,15 @@
  * 导览状态 — Zustand Store
  */
 import { create } from 'zustand';
-import type { Spot, HitSpot, CategoryInfo } from '../types';
+import type { Spot, HitSpot, CategoryInfo, AccuracyLevel } from '../types';
+
+/** 触发日志条目（调试面板用，最多保留 RECENT_LIMIT 条） */
+export interface TriggerLogEntry {
+  spotName: string;
+  at: number;
+}
+
+const RECENT_LIMIT = 10;
 
 interface TourState {
   currentHit: HitSpot | null;
@@ -13,14 +21,20 @@ interface TourState {
   syncStatus: 'idle' | 'syncing' | 'done' | 'error';
   syncError: string | null;
   userLocation: { lat: number; lng: number } | null;
+  /** 实测精度（米）；无定位时为 null */
+  accuracy: number | null;
+  /** 精度档位（good ≤30 / fair 30~50 / poor >50）；无定位时为 null */
+  accuracyLevel: AccuracyLevel | null;
   isAccuracyGood: boolean;
   mockLocation: { lat: number; lng: number } | null;
   newSpotHint: string | null;
   categories: CategoryInfo[];
+  triggerLog: TriggerLogEntry[];
 
   setCurrentHit: (hit: HitSpot | null) => void;
   enqueue: (hit: HitSpot) => void;
   dequeue: () => HitSpot | undefined;
+  clearQueue: () => void;
   setCooldown: (spotId: number) => void;
   isInCooldown: (spotId: number) => boolean;
   setSpots: (spots: Spot[]) => void;
@@ -28,11 +42,13 @@ interface TourState {
   setSyncStatus: (status: TourState['syncStatus']) => void;
   setSyncError: (err: string | null) => void;
   setUserLocation: (loc: { lat: number; lng: number } | null) => void;
-  setIsAccuracyGood: (v: boolean) => void;
+  /** 更新定位精度：accuracy + 档位 + 是否可触发（滞回由调用方算好后传入） */
+  setAccuracy: (accuracy: number | null, level: AccuracyLevel | null, isGood: boolean) => void;
   setMockLocation: (loc: { lat: number; lng: number } | null) => void;
   setNewSpotHint: (hint: string | null) => void;
   switchToNext: () => HitSpot | undefined;
   setCategories: (cats: CategoryInfo[]) => void;
+  logTrigger: (spotName: string) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -44,10 +60,13 @@ export const useTourStore = create<TourState>((set, get) => ({
   syncStatus: 'idle',
   syncError: null,
   userLocation: null,
+  accuracy: null,
+  accuracyLevel: null,
   isAccuracyGood: false,
   mockLocation: null,
   newSpotHint: null,
   categories: [],
+  triggerLog: [],
 
   setCurrentHit: (hit) => set({ currentHit: hit }),
   enqueue: (hit) => set((s) => ({ queue: [...s.queue, hit] })),
@@ -58,6 +77,7 @@ export const useTourStore = create<TourState>((set, get) => ({
     set({ queue: rest });
     return next;
   },
+  clearQueue: () => set({ queue: [] }),
   setCooldown: (spotId) =>
     set((s) => ({ cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 } })),
   isInCooldown: (spotId) => {
@@ -69,7 +89,8 @@ export const useTourStore = create<TourState>((set, get) => ({
   setSyncStatus: (status) => set({ syncStatus: status }),
   setSyncError: (err) => set({ syncError: err }),
   setUserLocation: (loc) => set({ userLocation: loc }),
-  setIsAccuracyGood: (v) => set({ isAccuracyGood: v }),
+  setAccuracy: (accuracy, accuracyLevel, isGood) =>
+    set({ accuracy, accuracyLevel, isAccuracyGood: isGood }),
   setMockLocation: (loc) => set({ mockLocation: loc }),
   setNewSpotHint: (hint) => set({ newSpotHint: hint }),
   switchToNext: () => {
@@ -80,4 +101,8 @@ export const useTourStore = create<TourState>((set, get) => ({
     return next;
   },
   setCategories: (cats) => set({ categories: cats }),
+  logTrigger: (spotName) =>
+    set((s) => ({
+      triggerLog: [...s.triggerLog, { spotName, at: Date.now() }].slice(-RECENT_LIMIT),
+    })),
 }));

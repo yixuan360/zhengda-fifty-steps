@@ -38,9 +38,26 @@ export function useTour() {
     return unsub;
   }, []);
 
-  // ─── 订阅播放完成（audioStore.state 回到 idle 时触发） ──
+  // ─── 订阅播放事件 ─────────────────────────────────────
   useEffect(() => {
     const unsub = useAudioStore.subscribe((state, prevState) => {
+      // 手动播放了非引擎景点（详情页）→ 放弃当前引擎曲目，
+      // 否则该曲目结束时会被误判为"播完"而写历史/冷却/出队（审查 LOW-3）。
+      if (
+        state.state === 'loading' &&
+        state.currentSpotId != null &&
+        state.currentSpotId !== currentSpotId.current
+      ) {
+        currentSpotId.current = null;
+        useTourStore.getState().clearQueue();
+        useTourStore.getState().setCurrentHit(null);
+        if (dequeueTimer.current !== null) {
+          clearTimeout(dequeueTimer.current);
+          dequeueTimer.current = null;
+        }
+        return;
+      }
+
       const wasActive =
         prevState.state === 'playing' || prevState.state === 'loading';
       if (wasActive && state.state === 'idle' && currentSpotId.current !== null) {
@@ -48,6 +65,17 @@ export function useTour() {
       }
     });
     return unsub;
+  }, []);
+
+  // ─── 订阅 mock 清除：清空"已进入"集合 ─────────────────
+  // mock 期间"进入"的景点在真实定位也处于半径内时不会重新触发，
+  // 清除 mock 后应重新按真实 GPS 判定（审查 LOW-2b）。
+  useEffect(() => {
+    return useTourStore.subscribe((state, prevState) => {
+      if (prevState.mockLocation != null && state.mockLocation == null) {
+        enteredSpotIds.current.clear();
+      }
+    });
   }, []);
 
   // ─── 🟢#13 cleanup：组件卸载时清除定时器 ──────────────
@@ -113,6 +141,8 @@ export function useTour() {
     const store = useTourStore.getState();
     store.setCurrentHit(hit);
     currentSpotId.current = hit.spot.id;
+    // 🟢 触发日志（调试面板展示最近触发记录）
+    store.logTrigger(hit.spot.name);
     // 传递 spotId 用于 track id（🟡#6）
     getPlayer().play(hit.spot.audioUrl, hit.spot.name, hit.spot.id);
   }

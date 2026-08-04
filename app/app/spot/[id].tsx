@@ -44,15 +44,21 @@ export default function SpotDetailScreen() {
     })();
   }, [id]);
 
-  // 播放/暂停切换（通过 spotRef + getState 避免闭包过期，空 deps 保证 hook 位置恒定）
+  // 播放/停止两态切换（通过 spotRef + getState 避免闭包过期，空 deps 保证 hook 位置恒定）
+  // v6：点击播放 → 再点一下停止（重置），不再提供暂停/继续。
   const handleToggle = useCallback(() => {
     const s = spotRef.current;
     if (!s?.audioUrl) return;
     const st = useAudioStore.getState();
     const active = !!(s.audioUrl && st.currentUrl && st.currentUrl.includes(cacheKey(s.audioUrl)));
-    if (!active) { getPlayer().play(s.audioUrl, s.name, s.id); }
-    else if (st.state === 'playing') getPlayer().pause();
-    else if (st.state === 'paused') getPlayer().resume();
+    if (!active) {
+      // 未播放 → 播放
+      getPlayer().play(s.audioUrl, s.name, s.id);
+    } else {
+      // 播放中/暂停 → 停止（手动停止：不写历史、不设冷却）
+      useAudioStore.getState().setManuallyStopped(true);
+      getPlayer().stop();
+    }
   }, []);
 
   if (!id || isNaN(Number(id))) return <View style={[styles.centered,{backgroundColor:Color.pageBg}]}><Text style={{color:Color.caption}}>参数无效</Text></View>;
@@ -62,14 +68,12 @@ export default function SpotDetailScreen() {
   const distance = userLocation ? haversineDistance(userLocation, { lat: spot.lat, lng: spot.lng }) : null;
   const isThisActive = !!(spot.audioUrl && audioUrl && audioUrl.includes(cacheKey(spot.audioUrl)));
   const isPlaying = isThisActive && audioState === 'playing';
-  const isPaused = isThisActive && audioState === 'paused';
   const isLoadingAudio = isThisActive && audioState === 'loading';
 
   let btnIcon = 'play';
   let btnLabel = '播放语音讲解';
   if (isLoadingAudio) { btnIcon = 'hourglass-outline'; btnLabel = '加载中...'; }
-  else if (isPlaying) { btnIcon = 'pause'; btnLabel = '暂停'; }
-  else if (isPaused) { btnIcon = 'play'; btnLabel = '继续播放'; }
+  else if (isThisActive) { btnIcon = 'stop'; btnLabel = '停止播放'; }
 
   return (
     <ScrollView style={[styles.container,{backgroundColor:Color.pageBg}]}>

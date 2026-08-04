@@ -59,7 +59,7 @@ export async function syncAll(): Promise<SyncResult> {
       store.setSyncStatus('done');
     } else {
       store.setSyncStatus('error');
-      if (!store.getState().syncError) store.setSyncError('景点数据同步失败，使用本地缓存');
+      if (!store.syncError) store.setSyncError('景点数据同步失败，使用本地缓存');
     }
   }
   return result;
