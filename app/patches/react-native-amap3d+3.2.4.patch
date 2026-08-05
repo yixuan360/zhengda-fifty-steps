@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-amap3d/lib/src/component.ts b/node_modules/react-native-amap3d/lib/src/component.ts
+index 95e6081e89591d102c6f46f48b3c1933469c637f..f0e88679b0b5c8f4e98d2d87fea3996679811f6c 100644
+--- a/node_modules/react-native-amap3d/lib/src/component.ts
++++ b/node_modules/react-native-amap3d/lib/src/component.ts
+@@ -25,7 +25,7 @@ export default class Component<P, S = {}> extends PureComponent<P, S> {
+     const handle = findNodeHandle(this);
+     if (handle) {
+       const command = UIManager.getViewManagerConfig(this.name).Commands[name];
+-      UIManager.dispatchViewManagerCommand(handle, command, params);
++      UIManager.dispatchViewManagerCommand(handle, command, params ?? []);
+     }
+   }
+ }
