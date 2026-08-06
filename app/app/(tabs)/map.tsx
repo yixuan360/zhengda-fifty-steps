@@ -14,7 +14,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';
-import { MapView, Marker, Circle } from 'react-native-amap3d';
+import { MapView, Marker, Circle, Polygon, Polyline } from 'react-native-amap3d';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ import { useTourStore } from '../../stores/tourStore';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { useTour } from '../../hooks/useTour';
 import { initAMap } from '../../services/amap';
-import { haversineDistance } from '../../utils/distance';
+import { getTriggerSignedDistance } from '../../utils/trigger';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
 /** 郑州大学主校区中心点（GCJ-02，42 个景点质心 + 北偏微调覆盖眉湖厚山） */
@@ -44,6 +44,20 @@ const QUICK_POINTS = [
 /** 触发圈填充/描边（主色青绿，15% 透明度） */
 const CIRCLE_FILL = 'rgba(26,122,90,0.15)';
 const CIRCLE_STROKE = 'rgba(26,122,90,0.45)';
+
+/** 项目 LatLng({lat,lng}) → amap3d LatLng({latitude,longitude}) */
+function toAmapLatLng(p: { lat: number; lng: number }): { latitude: number; longitude: number } {
+  return { latitude: p.lat, longitude: p.lng };
+}
+
+/** 触发形状中文标签（调试面板） */
+function triggerShapeLabel(s: { trigger?: { type?: string } }): string {
+  switch (s.trigger?.type) {
+    case 'corridor': return '走廊';
+    case 'polygon': return '多边形';
+    default: return '圆形';
+  }
+}
 
 /**
  * 调试 UI（模拟定位面板 + 调试面板）开关。
@@ -79,7 +93,7 @@ export default function MapScreen() {
   const triggerLog = useTourStore((s) => s.triggerLog);
   const activeSpots = spots.filter((s) => s.isActive);
 
-  const [showCircles, setShowCircles] = useState(true);
+  const [showFences, setShowFences] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,13 +111,13 @@ export default function MapScreen() {
     );
   }, []);
 
-  // ── 最近景点（调试面板用） ──
+  // ── 最近景点（调试面板用）：d = 到区域有符号距离（负=区内，越小越深入） ──
   const nearest = useMemo(() => {
     if (!userLocation || activeSpots.length === 0) return null;
-    let best: { name: string; dist: number; radius: number } | null = null;
+    let best: { name: string; d: number; shape: string } | null = null;
     for (const s of activeSpots) {
-      const d = haversineDistance(userLocation, { lat: s.lat, lng: s.lng });
-      if (!best || d < best.dist) best = { name: s.name, dist: Math.round(d), radius: s.triggerRadius };
+      const d = getTriggerSignedDistance(userLocation, s);
+      if (!best || d < best.d) best = { name: s.name, d: Math.round(d), shape: triggerShapeLabel(s) };
     }
     return best;
   }, [userLocation, activeSpots]);
@@ -178,17 +192,46 @@ export default function MapScreen() {
           zoomControlsEnabled={false}
           labelsEnabled
         >
-          {/* 触发圈可视化：每个景点半径 = triggerRadius（可开关） */}
-          {showCircles && activeSpots.map((s) => (
-            <Circle
-              key={`c-${s.id}`}
-              center={{ latitude: s.lat, longitude: s.lng }}
-              radius={s.triggerRadius}
-              fillColor={CIRCLE_FILL}
-              strokeColor={CIRCLE_STROKE}
-              strokeWidth={1.5}
-            />
-          ))}
+          {/* 触发围栏可视化（可开关）：circle→圆，corridor→中心线，polygon→多边形 */}
+          {showFences && activeSpots.map((s) => {
+            const t = s.trigger;
+            if (t?.type === 'corridor' && (t.points?.length ?? 0) >= 2) {
+              return (
+                <Polyline
+                  key={`f-${s.id}`}
+                  points={t.points!.map(toAmapLatLng)}
+                  width={2.5}
+                  color={CIRCLE_STROKE}
+                  zIndex={5}
+                />
+              );
+            }
+            if (t?.type === 'polygon' && (t.points?.length ?? 0) >= 3) {
+              // 渲染时闭合环形（首点补到末位），保证原生 Polygon 绘制完整
+              const ring = t.points!.map(toAmapLatLng);
+              ring.push(ring[0]);
+              return (
+                <Polygon
+                  key={`f-${s.id}`}
+                  points={ring}
+                  fillColor={CIRCLE_FILL}
+                  strokeColor={CIRCLE_STROKE}
+                  strokeWidth={1.5}
+                  zIndex={5}
+                />
+              );
+            }
+            return (
+              <Circle
+                key={`f-${s.id}`}
+                center={{ latitude: s.lat, longitude: s.lng }}
+                radius={s.triggerRadius}
+                fillColor={CIRCLE_FILL}
+                strokeColor={CIRCLE_STROKE}
+                strokeWidth={1.5}
+              />
+            );
+          })}
 
           {/* 景点 Marker */}
           {activeSpots.map((spot) => (
@@ -258,14 +301,14 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* ── 触发圈图层开关（右上，始终可用） ── */}
+      {/* ── 触发围栏图层开关（右上，始终可用） ── */}
       <TouchableOpacity
         style={[styles.circleToggle, { top: insets.top + 60, right: Spacing.pageH }]}
-        onPress={() => setShowCircles((v) => !v)}
+        onPress={() => setShowFences((v) => !v)}
         activeOpacity={0.8}
         hitSlop={8}
       >
-        <Ionicons name={showCircles ? 'radio-button-on' : 'radio-button-off'} size={20} color={showCircles ? Color.primary : Color.caption} />
+        <Ionicons name={showFences ? 'radio-button-on' : 'radio-button-off'} size={20} color={showFences ? Color.primary : Color.caption} />
       </TouchableOpacity>
 
       {/* ── 回中按钮（右下） ── */}
@@ -369,7 +412,7 @@ export default function MapScreen() {
                 <DebugLine label="坐标" value={userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : '未获取'} />
                 <DebugLine label="精度" value={`${accuracyText} · ${accuracyLevel ?? '--'}${mockLocation ? '（模拟）' : ''}`} />
                 <DebugLine label="门控" value={isAccuracyGood ? '可触发' : '已暂停(连续poor)'} />
-                <DebugLine label="最近景点" value={nearest ? `${nearest.name} · ${nearest.dist}m / 半径${nearest.radius}m` : '无'} />
+                <DebugLine label="最近景点" value={nearest ? `${nearest.name} · d=${nearest.d}m · ${nearest.shape}` : '无'} />
                 <DebugLine label="引擎" value={`冷却${Object.keys(cooldowns).length} · 队列${queue.length} · 当前${currentHit?.spot.name ?? '无'}`} />
                 <DebugLine label="触发记录" value={triggerLog.length ? triggerLog.map((t) => t.spotName).join(' → ') : '无'} />
               </View>

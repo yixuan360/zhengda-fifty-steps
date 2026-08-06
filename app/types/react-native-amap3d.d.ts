@@ -65,6 +65,33 @@ declare module 'react-native-amap3d' {
 
   export class Circle extends React.Component<CircleProps> {}
 
+  export interface PolygonProps {
+    /** 节点坐标（环形，自动闭合） */
+    points: LatLng[];
+    strokeWidth?: number;
+    strokeColor?: string;
+    fillColor?: string;
+    zIndex?: number;
+  }
+
+  export class Polygon extends React.Component<PolygonProps> {}
+
+  export interface PolylineProps {
+    /** 节点坐标 */
+    points: LatLng[];
+    /** 线段宽度（px） */
+    width?: number;
+    color?: string;
+    colors?: (string | number)[];
+    zIndex?: number;
+    gradient?: boolean;
+    geodesic?: boolean;
+    dotted?: boolean;
+    onPress?: () => void;
+  }
+
+  export class Polyline extends React.Component<PolylineProps> {}
+
   export namespace AMapSdk {
     function init(apiKey?: string): void;
     function getVersion(): Promise<string>;
