@@ -31,6 +31,7 @@ class SpotSerializer(serializers.ModelSerializer):
             'lat': instance.lat,
             'lng': instance.lng,
             'triggerRadius': instance.trigger_radius,
+            'trigger': instance.trigger or None,  # v4.1 触发几何，None = 圆形
             'summary': instance.summary,
             'description': instance.description,
             'imageUrl': image_url,

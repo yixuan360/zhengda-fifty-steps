@@ -33,6 +33,9 @@ class Spot(models.Model):
     lng = models.FloatField('经度（GCJ-02）')
     category = models.CharField('分类', max_length=20, default='architecture')
     trigger_radius = models.IntegerField('触发半径（米）', default=50)
+    # v4.1 触发几何：{"type":"circle|corridor|polygon","halfWidth":15,"points":[[lat,lng],...]}
+    # 缺省/None = 圆形（lat/lng + trigger_radius），存量行为不变
+    trigger = models.JSONField('触发区域几何（JSON）', blank=True, null=True)
     summary = models.TextField('摘要', blank=True, default='')
     description = models.TextField('详细介绍')
     image = models.ImageField('景点图片', upload_to=image_upload_path, max_length=500, blank=True)

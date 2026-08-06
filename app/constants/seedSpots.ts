@@ -1,22 +1,22 @@
 /**
- * 内置种子景点 — 离线兜底数据（V5.3，42 个郑大主校区景点）
+ * 内置种子景点 — 离线兜底数据（V75，郑大主校区景点）
  *
  * 数据源：server 数据库，与 Admin 后台录入数据保持一致。
  * 用途：首次启动灌入 SQLite；同步成功后被服务器数据覆盖。
- * 坐标：全部 GCJ-02。
+ * 坐标：全部 GCJ-02；trigger 为 v4.1 触发几何（缺省即圆）。
  *
  * 自动生成命令：cd server && python spots_to_seed.py
  */
 
-import type { Spot } from '../types';
+import type { Spot, Trigger } from '../types';
 
 const s = (
   id: number, name: string, lat: number, lng: number,
   triggerRadius: number, summary: string, description: string,
-  category: string = "architecture",
+  category: string = "architecture", trigger?: Trigger,
 ): Spot => ({
   id, name, lat, lng, triggerRadius, summary, description,
-  imageUrl: "", audioUrl: "", isActive: true, category, updatedAt: 0,
+  imageUrl: "", audioUrl: "", isActive: true, category, trigger, updatedAt: 0,
 });
 
 export const SEED_SPOTS: Spot[] = [
@@ -143,11 +143,11 @@ export const SEED_SPOTS: Spot[] = [
   s(31, "南操场", 34.809419, 113.531669, 50,
     "校园南侧生活区开放式户外运动场。",
     "位于校园南侧生活区附近，开放式户外运动场地，设有简易跑道、球类运动区，主打日常休闲运动，方便南区宿舍学子就近锻炼。主要服务南区柳园、荷园宿舍师生，是日常晨练、休闲运动、班级团建的热门场地。",
-    "humanity"),
+    "service"),
   s(32, "北操场", 34.824132, 113.534781, 50,
     "校园北侧运动场，紧邻校医院与菊园松园。",
     "位于校园北侧、靠近校医院区域，场地规整，适合日常体育课辅助训练、学生自发体育活动、晨练慢跑。紧邻北区菊园、松园宿舍区与校医院，是北区师生日常体育锻炼的核心场地。",
-    "humanity"),
+    "service"),
   s(33, "资源与材料创新中心", 34.8165, 113.5358, 40,
     "材料学科重点科研建筑，国家重点实验室所在地。",
     "郑大材料学科重点科研建筑，国家重点实验室所在地，汇聚顶尖科研团队与先进实验设备，开展材料领域前沿研究。依托郑大材料科学与工程国家\"双一流\"建设学科打造，多项科研成果助力航天与国防重大工程。（注：坐标为近似推算，以实地为准）",
@@ -316,4 +316,8 @@ export const SEED_SPOTS: Spot[] = [
     "奥运冠军摇篮，体育学一级博士点。",
     "培养了朱婷、贾占波等奥运冠军及宁泽涛等世界冠军。体育学科进入ESI全球前1%，突出武术和运动训练办学特色，建有中原武术文化研究中心。",
     "college"),
+  s(75, "郑大-百度飞桨人工智能实验室", 34.811211, 113.538097, 50,
+    "郑州大学 - 百度飞桨人工智能工程应用实验室是郑大力学与安全工程学院与百度共建、全国首批飞桨校企科创实验室，立足AI + 力学交叉方向，面向全校本科生开展人工智能、机器人与工程智能项目实训、学科竞赛与成果落地。",
+    "与清华大学、吉林大学一同成为百度飞桨首批三家创新创业实验室签约高校。该实验室依托郑州大学力学与安全工程学院，由马竞副教授担任主任，开创了 \"AI + 力学\" 的跨学科人才培养新模式，致力于“人工智能+工程”复合型人才培养，研究领域涵盖具身智能机器人、跨介质无人机、工业自动化及AI无人养殖等",
+    "teaching"),
 ];

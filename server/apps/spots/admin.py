@@ -60,6 +60,12 @@ class SpotAdmin(admin.ModelAdmin):
         ('基本信息', {
             'fields': ('name', 'category', 'lat', 'lng', 'trigger_radius'),
         }),
+        ('触发区域（v4.1 几何）', {
+            'fields': ('trigger',),
+            'description': '留空 = 圆形（用上方 trigger_radius）。'
+                           'JSON 格式：{"type":"corridor","halfWidth":15,"points":[[lat,lng],...]}'
+                           ' 或 {"type":"polygon","points":[[lat,lng],...]}。points 为 GCJ-02。',
+        }),
         ('内容', {
             'fields': ('summary', 'description'),
         }),
