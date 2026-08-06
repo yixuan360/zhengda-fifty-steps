@@ -59,6 +59,7 @@ class AdminE2ETest(TestCase):
         )
         response = self.admin_client.post('/manage/spots/spot/add/', {
             'name': '测试景点',
+            'category': 'architecture',  # Admin 分类为必填 ChoiceField（分类动态化后）
             'lat': '34.817',
             'lng': '113.535',
             'trigger_radius': '50',
@@ -98,6 +99,7 @@ class AdminE2ETest(TestCase):
         )
         response = self.admin_client.post('/manage/spots/spot/add/', {
             'name': '完整景点',
+            'category': 'architecture',  # Admin 分类为必填 ChoiceField（分类动态化后）
             'lat': '34.818',
             'lng': '113.536',
             'trigger_radius': '60',
