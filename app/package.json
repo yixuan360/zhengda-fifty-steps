@@ -5,12 +5,15 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "test:trigger": "node scripts/verify-trigger.js",
     "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.0.0",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "@turf/point-to-line-distance": "^7.4.0",
     "axios": "^1.7.0",
     "expo": "~57.0.4",
     "expo-build-properties": "^57.0.5",

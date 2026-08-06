@@ -16,6 +16,16 @@ export interface ApiResponse<T> {
   message: string;
 }
 
+/** 触发区域几何配置（GCJ-02 全链路统一坐标系） */
+export interface Trigger {
+  /** 缺省为 circle：圆心 + triggerRadius（存量行为不变） */
+  type: 'circle' | 'corridor' | 'polygon';
+  /** corridor 半宽（米），缺省 15 */
+  halfWidth?: number;
+  /** corridor 折线 / polygon 顶点（按顺序连接；polygon 自动闭合） */
+  points?: LatLng[];
+}
+
 /** 景点数据 */
 export interface Spot {
   id: number;
@@ -29,6 +39,8 @@ export interface Spot {
   audioUrl: string;
   isActive: boolean;
   category?: string;  // 'college'|'nature'|'architecture'|'teaching'|'service'|'humanity'
+  /** 触发区域形状；缺省 = circle（lat/lng + triggerRadius） */
+  trigger?: Trigger;
   updatedAt: number;   // 毫秒 Unix 时间戳
 }
 

@@ -4,18 +4,18 @@
  * 全部逻辑集中在此文件，不拆分为多个 service/manager。
  *
  * 数据流：
- *   GPS 更新 → Haversine 距离 → 50m 触发 + 滞回确认
+ *   GPS 更新 → 到区域的有符号距离（圆/走廊/多边形统一，v4.1）→ 进围栏 + 滞回确认
  *   → 命中排队（距离最近优先）→ 调用音频播放
  *   → 播放完成 → 60s 冷却 → 出队下一个
  *
- * 滞回机制：进入 ≤ 50m 触发，离开 > 70m 确认，20m 缓冲带防 GPS 抖动
+ * 滞回机制：进入 d ≤ 0 触发（d=到区域边界距离，负=区内），离开 d > 20m 确认，20m 缓冲带防 GPS 抖动
  * 多景点冲突：按距离最近优先，其余入内存队列顺位播放
  * 冷却规则：单景点独立冷却 60s，离开触发区域后自动重置
  */
 import { useEffect, useRef } from 'react';
 import { useTourStore } from '../stores/tourStore';
 import { useAudioStore } from '../stores/audioStore';
-import { haversineDistance } from '../utils/distance';
+import { getTriggerSignedDistance } from '../utils/trigger';
 import { insertPlayHistory } from '../services/database';
 import { getPlayer } from './useAudioPlayer';
 import type { LatLng, HitSpot } from '../types';
@@ -116,21 +116,26 @@ export function useTour() {
     for (const spot of spots) {
       if (!spot.isActive) continue;
 
-      const dist = haversineDistance(userLoc, { lat: spot.lat, lng: spot.lng });
-      const triggerDist = spot.triggerRadius;
-      const leaveDist = triggerDist + BUFFER_METERS;
+      // v4.1：统一"到区域的有符号距离"——圆/走廊/多边形共用同一标量 d，
+      // d<=0 进围栏，d>BUFFER_METERS 出围栏。圆形与此前 dist<=radius / dist>radius+20
+      // 逐字节等价（d = 圆心距 - radius），存量行为不变。
+      const d = getTriggerSignedDistance(userLoc, spot);
 
-      if (dist <= triggerDist && !enteredSpotIds.current.has(spot.id)) {
+      if (d <= 0 && !enteredSpotIds.current.has(spot.id)) {
         enteredSpotIds.current.add(spot.id);
         if (!isInCooldown(spot.id)) {
-          hits.push({ spot, distance: dist, hitAt: Date.now() });
+          hits.push({ spot, distance: d, hitAt: Date.now() });
         }
-      } else if (dist > leaveDist && enteredSpotIds.current.has(spot.id)) {
+      } else if (d > BUFFER_METERS && enteredSpotIds.current.has(spot.id)) {
         enteredSpotIds.current.delete(spot.id);
       }
     }
 
     if (hits.length > 0) {
+      // 排序键 = 到区域的有符号距离（d 越小越深入/越近，优先播放）。
+      // 注意：v4.1 起由旧"到圆心距"改为"区域深度"——半径异构的两个重叠圆，
+      // 个别站位下播放顺序可能与旧版不同，属有意变更（圆形区域大小不再被忽略，
+      // 且 R2 混入走廊/多边形后"到区域深度"才是跨形状统一的优先级）。
       hits.sort((a, b) => a.distance - b.distance);
       handleHits(hits);
     }

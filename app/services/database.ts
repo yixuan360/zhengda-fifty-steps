@@ -4,7 +4,7 @@
  * 启动时检测表存在 → 不存在则建表 → 已存在直接用（不用 Migration 框架）
  */
 import * as SQLite from 'expo-sqlite';
-import type { Spot, GlobalConfig } from '../types';
+import type { Spot, GlobalConfig, LatLng } from '../types';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -26,6 +26,7 @@ async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
       lat             REAL NOT NULL,
       lng             REAL NOT NULL,
       trigger_radius  INTEGER DEFAULT 50,
+      trigger         TEXT DEFAULT '',
       summary         TEXT DEFAULT '',
       description     TEXT NOT NULL DEFAULT '',
       image_url       TEXT DEFAULT '',
@@ -47,6 +48,12 @@ async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
       FOREIGN KEY (spot_id) REFERENCES spots(id) ON DELETE CASCADE
     );
   `);
+
+  // 兼容旧表：幂等补齐 v4.1 新增列（已存在则静默跳过）。
+  // createTables 每次开库都跑，覆盖"同步写入"与"seed 覆盖"两条路径。
+  try {
+    await db.execAsync(`ALTER TABLE spots ADD COLUMN trigger TEXT DEFAULT ''`);
+  } catch { /* 列已存在 */ }
 }
 
 // ─── spots CRUD ──────────────────────────────────────
@@ -58,9 +65,10 @@ export async function replaceAllSpots(spots: Spot[]): Promise<void> {
     await database.runAsync('DELETE FROM spots');
     for (const s of spots) {
       await database.runAsync(
-        `INSERT INTO spots (id, name, lat, lng, trigger_radius, summary, description, image_url, audio_url, category, is_active, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [s.id, s.name, s.lat, s.lng, s.triggerRadius, s.summary, s.description,
+        `INSERT INTO spots (id, name, lat, lng, trigger_radius, trigger, summary, description, image_url, audio_url, category, is_active, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [s.id, s.name, s.lat, s.lng, s.triggerRadius, s.trigger ? JSON.stringify(s.trigger) : '',
+         s.summary, s.description,
          s.imageUrl, s.audioUrl, s.category || '', s.isActive ? 1 : 0, s.updatedAt],
       );
     }
@@ -98,6 +106,35 @@ export async function getSpotById(id: number): Promise<Spot | null> {
   return row ? rowToSpot(row) : null;
 }
 
+/** 解析 trigger 列（JSON 串），损坏/缺失返回 undefined → 按圆形兜底 */
+function parseTrigger(raw: string | null | undefined): Spot['trigger'] {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
+      // 结构校验：corridor/polygon 必须带坐标数组，否则视为损坏回落圆形。
+      // 仅校验 type 会放过 {type:'polygon', points:'garbage'} 这类合法 JSON，
+      // 后续 points.map 直接抛错，打穿兜底。
+      if (parsed.type !== 'circle') {
+        if (
+          !Array.isArray(parsed.points) ||
+          parsed.points.length === 0 ||
+          !parsed.points.every(
+            (p: unknown) =>
+              !!p &&
+              typeof (p as LatLng).lat === 'number' &&
+              typeof (p as LatLng).lng === 'number',
+          )
+        ) {
+          return undefined;
+        }
+      }
+      return parsed as Spot['trigger'];
+    }
+  } catch { /* 数据损坏则回落圆形 */ }
+  return undefined;
+}
+
 function rowToSpot(row: any): Spot {
   return {
     id: row.id,
@@ -105,6 +142,7 @@ function rowToSpot(row: any): Spot {
     lat: row.lat,
     lng: row.lng,
     triggerRadius: row.trigger_radius,
+    trigger: parseTrigger(row.trigger),
     summary: row.summary,
     description: row.description,
     imageUrl: row.image_url,
