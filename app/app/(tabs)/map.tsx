@@ -25,8 +25,11 @@ import { initAMap } from '../../services/amap';
 import { getTriggerSignedDistance } from '../../utils/trigger';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
-/** 郑州大学主校区中心点（GCJ-02，42 个景点质心 + 北偏微调覆盖眉湖厚山） */
-const ZZU_CAMPUS = { latitude: 34.8186, longitude: 113.5365 };
+/** 初始视野矩形：郑大主校区（右上角 113.54206/34.827075，左下角 113.52951/34.808282） */
+const ZZU_CAMPUS_BOUNDS = {
+  southwest: { latitude: 34.808282, longitude: 113.52951 },
+  northeast: { latitude: 34.827075, longitude: 113.54206 },
+};
 
 /** 5 次点击激活模拟定位面板 */
 const DEBUG_TAP_COUNT = 5;
@@ -185,7 +188,7 @@ export default function MapScreen() {
         <MapView
           ref={mapRef}
           style={styles.map}
-          initialCameraPosition={{ target: ZZU_CAMPUS, zoom: 15, tilt: 0 }}
+          initialLatLngBounds={ZZU_CAMPUS_BOUNDS}
           myLocationButtonEnabled={false}
           rotateGesturesEnabled={false}
           tiltGesturesEnabled={false}

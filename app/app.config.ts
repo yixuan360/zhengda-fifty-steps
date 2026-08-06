@@ -50,6 +50,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['./plugins/withAMapKey', { apiKey: process.env.EXPO_PUBLIC_AMAP_ANDROID_KEY ?? 'YOUR_AMAP_ANDROID_KEY' }],
     // 排除独立 location SDK（3dmap 9.x 已内置定位类），解决 Duplicate class 构建失败
     './plugins/withExcludeAmapLocation',
+    // 注入高德自定义地图样式（去底图 POI 标注）：prebuild 时把 assets/map-style/*.data 拷贝到 android assets
+    './plugins/withMapStyle',
     // 与 android/gradle.properties、AndroidManifest 对齐：EAS 云构建走 prebuild（android/
     // 目录被 .gitignore 排除、不会上传），因此原生配置必须同时在此声明才不会漂移
     [

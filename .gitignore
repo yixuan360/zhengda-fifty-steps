@@ -32,6 +32,9 @@ ios/
 eas-build/
 *.tar.gz
 
+# 高德自定义样式原始下载包（已解压消费到 app/assets/map-style/）
+mystyle_sdk_*.zip
+
 # 用户敏感文件
 *.keystore
 *.jks

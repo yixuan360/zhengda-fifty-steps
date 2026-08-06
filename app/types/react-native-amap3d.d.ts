@@ -22,8 +22,15 @@ declare module 'react-native-amap3d' {
     tilt?: number;
   }
 
+  export interface LatLngBounds {
+    southwest: LatLng;
+    northeast: LatLng;
+  }
+
   export interface MapViewProps extends ViewProps {
     initialCameraPosition?: CameraPosition;
+    /** 初始视野：按矩形边界适配（fitBounds，android） */
+    initialLatLngBounds?: LatLngBounds;
     myLocationEnabled?: boolean;
     myLocationButtonEnabled?: boolean;
     compassEnabled?: boolean;
