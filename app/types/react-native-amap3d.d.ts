@@ -38,7 +38,6 @@ declare module 'react-native-amap3d' {
     zoomControlsEnabled?: boolean;
     rotateGesturesEnabled?: boolean;
     tiltGesturesEnabled?: boolean;
-    labelsEnabled?: boolean;
     trafficEnabled?: boolean;
     onLoad?: () => void;
     children?: React.ReactNode;

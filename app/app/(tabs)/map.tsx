@@ -193,7 +193,6 @@ export default function MapScreen() {
           rotateGesturesEnabled={false}
           tiltGesturesEnabled={false}
           zoomControlsEnabled={false}
-          labelsEnabled
         >
           {/* 触发围栏可视化（可开关）：circle→圆，corridor→中心线，polygon→多边形 */}
           {showFences && activeSpots.map((s) => {
