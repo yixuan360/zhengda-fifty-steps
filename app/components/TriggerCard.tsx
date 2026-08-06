@@ -67,6 +67,14 @@ export default function TriggerCard() {
   if (!visible || !currentHit) return null;
 
   const isPlaying = audioState === 'playing' || audioState === 'loading';
+  // v7：标签必须绑定真实播放状态，不能硬编码"正在讲解"——
+  // 否则下载失败时卡片仍显示"正在讲解"（截图状态不一致的根因）
+  const tagText =
+    audioState === 'loading' ? '⏳ 正在加载语音'
+    : audioState === 'paused' ? '⏸ 已暂停'
+    : audioState === 'error' ? '⚠ 语音加载失败'
+    : audioState === 'idle' ? '⏹ 已停止'
+    : '▶ 正在讲解';
   const title = spotName ?? currentHit.spot.name;
 
   return (
@@ -76,7 +84,7 @@ export default function TriggerCard() {
     >
       <View style={styles.body}>
         <View style={styles.info}>
-          <Text style={styles.tag}>▶ 正在讲解</Text>
+          <Text style={styles.tag}>{tagText}</Text>
           <Text style={styles.name} numberOfLines={1}>{title}</Text>
         </View>
         <TouchableOpacity style={styles.stopBtn} onPress={handleStop} activeOpacity={0.8}>

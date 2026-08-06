@@ -9,9 +9,8 @@
  *       不是 v3 的数字枚举。
  */
 import { useEffect, useRef } from 'react';
-import * as FileSystem from 'expo-file-system/legacy';
-import { useAudioStore } from '../stores/audioStore';
-import { ensureCacheSpace, ensureAudioDir } from '../services/cache';
+import { useAudioStore, type AudioError } from '../stores/audioStore';
+import { ensureAudioCached } from '../services/cache';
 import type { PlaybackState } from '../types';
 
 // ─── RNTP 惰性加载 ──────────────────────────────────────
@@ -84,18 +83,9 @@ async function ensurePlayerReady(): Promise<void> {
 }
 
 // ─── 下载 ───────────────────────────────────────────────
-function cacheKey(url: string): string { return url.split('/').pop() || 'audio'; }
-
-async function downloadToCache(url: string): Promise<string> {
-  await ensureCacheSpace();
-  const audioDir = await ensureAudioDir();
-  const localPath = `${audioDir}${cacheKey(url)}`;
-  const info = await FileSystem.getInfoAsync(localPath);
-  if (info.exists) return localPath;
-  const result = await FileSystem.downloadAsync(url, localPath);
-  if (result.status != 200) throw new Error(`下载失败: HTTP ${result.status}`);
-  return localPath;
-}
+// v7：下载逻辑移至 services/cache 的 ensureAudioCached ——
+// URL 校验 + 哈希命名 + 并发去重 + 失败重试 + 半成品清理。
+// 失败时抛带 kind='download' 的错误，由 play() 转成结构化 store.error。
 
 // ─── 播放器 ─────────────────────────────────────────────
 /**
@@ -107,25 +97,41 @@ let playGeneration = 0;
 
 export function getPlayer() {
   return {
-    async play(url: string, spotName: string, spotId?: number): Promise<void> {
+    async play(url: string, spotName: string, spotId?: number, opts?: { engine?: boolean }): Promise<void> {
       if (!loadRNTP()) return;
       await ensurePlayerReady();
       const store = useAudioStore.getState();
+      store.setError(null);            // 清除上一次错误（若仍在 error 态则复位 idle，避免旧 toast 残留）
+      store.setEngineArmed(!!opts?.engine); // 引擎 playSpot/失败重试=true；详情页手动=false（审查 MEDIUM-3）
       store.setTrack(url, spotName, spotId);
       store.setManuallyStopped(false);
+      store.setLastFailed(null);       // 新播放开始，清除旧的"点击重试"记录
       try {
         store.setState('loading');
         const gen = ++playGeneration;
-        const localUri = await downloadToCache(url);
+        const localUri = await ensureAudioCached(url);
         if (gen !== playGeneration) {
-          // 下载期间被 stop() 或新的 play() 取代 → 丢弃本次播放
-          await TrackPlayer.reset();
+          // 下载期间被 stop() 或新的 play() 取代 → 直接丢弃本次播放。
+          // 不在此 reset()：接管者（新 play / stop）已经或将会自行 reset+add+play，
+          // 这里再 reset 会清掉已接管的播放（审查 HIGH-2）。
           return;
         }
         await TrackPlayer.reset();
         await TrackPlayer.add({ id: spotId != null ? String(spotId) : spotName, url: localUri, title: spotName });
         await TrackPlayer.play();
-      } catch (err: any) { useAudioStore.getState().setError(err?.message ?? '播放失败，请重试'); }
+      } catch (err: any) {
+        // 下载失败（kind='download'，可重试）与播放失败（kind='playback'）分开标记。
+        // message 一律转用户友好文案，不把原生桥接异常（ExponentFileSystem...）透传给 UI。
+        const st = useAudioStore.getState();
+        const kind: AudioError['kind'] = err?.kind === 'download' ? 'download' : 'playback';
+        const message =
+          kind === 'download'
+            ? (typeof err?.message === 'string' && err.message ? err.message : '语音加载失败，请检查网络')
+            : '播放失败，请重试';
+        st.setError({ kind, message });
+        st.setLastFailed({ url, name: spotName, spotId: spotId ?? null });
+        st.clearTrack();
+      }
     },
     pause:  () => { if (loadRNTP()) TrackPlayer.pause(); },
     resume: () => { if (loadRNTP()) TrackPlayer.play(); },
@@ -163,7 +169,14 @@ export function useAudioPlayer() {
         st.setDuration(e.duration);
       }),
       TrackPlayer.addEventListener(Event.PlaybackError, (e: any) => {
-        useAudioStore.getState().setError(e?.message ?? '播放失败，请重试');
+        // 原生播放错误：同样转用户友好文案并记录失败曲目，供"点击重试"
+        const st = useAudioStore.getState();
+        const currentUrl = st.currentUrl;
+        st.setError({ kind: 'playback', message: '播放失败，请重试' });
+        if (currentUrl) {
+          st.setLastFailed({ url: currentUrl, name: st.spotName ?? '语音', spotId: st.currentSpotId });
+          st.clearTrack();
+        }
       }),
     ];
 
@@ -172,7 +185,7 @@ export function useAudioPlayer() {
 
   return {
     state: store.state, spotName: store.spotName, position: store.position, duration: store.duration, error: store.error,
-    play:   (url: string, name: string, id?: number) => getPlayer().play(url, name, id),
+    play:   (url: string, name: string, id?: number, opts?: { engine?: boolean }) => getPlayer().play(url, name, id, opts),
     pause:  () => getPlayer().pause(), resume: () => getPlayer().resume(),
     stop:   () => getPlayer().stop(),  seekTo: (s: number) => getPlayer().seekTo(s),
   };

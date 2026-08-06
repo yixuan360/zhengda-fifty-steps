@@ -41,16 +41,32 @@ export function useTour() {
   // ─── 订阅播放事件 ─────────────────────────────────────
   useEffect(() => {
     const unsub = useAudioStore.subscribe((state, prevState) => {
-      // 手动播放了非引擎景点（详情页）→ 放弃当前引擎曲目，
+      // 非引擎播放（详情页手动 / hint 切换，engineArmed=false）→ 放弃当前引擎曲目，
       // 否则该曲目结束时会被误判为"播完"而写历史/冷却/出队（审查 LOW-3）。
+      // 用 engineArmed 而非 id 比对：失败后保留 ref 时，手动播放"同一景点"
+      // 也能被正确识别为手动（审查 MEDIUM-3）。
       if (
         state.state === 'loading' &&
         state.currentSpotId != null &&
-        state.currentSpotId !== currentSpotId.current
+        !state.engineArmed
       ) {
         currentSpotId.current = null;
         useTourStore.getState().clearQueue();
         useTourStore.getState().setCurrentHit(null);
+        if (dequeueTimer.current !== null) {
+          clearTimeout(dequeueTimer.current);
+          dequeueTimer.current = null;
+        }
+        return;
+      }
+
+      // 播放/下载失败 → 解卡引擎（v7 新增 error 分支，原代码完全缺失）：
+      // 只清当前命中与队列；不清 currentSpotId —— 保留它让"点击重试"仍按引擎语义
+      // 播放（完成时正常写历史/设冷却）。音频 store 的 error 由 AppToast 展示后自行复位。
+      if (state.state === 'error' && currentSpotId.current !== null) {
+        const tourStore = useTourStore.getState();
+        tourStore.setCurrentHit(null);
+        tourStore.clearQueue();
         if (dequeueTimer.current !== null) {
           clearTimeout(dequeueTimer.current);
           dequeueTimer.current = null;
@@ -143,8 +159,9 @@ export function useTour() {
     currentSpotId.current = hit.spot.id;
     // 🟢 触发日志（调试面板展示最近触发记录）
     store.logTrigger(hit.spot.name);
-    // 传递 spotId 用于 track id（🟡#6）
-    getPlayer().play(hit.spot.audioUrl, hit.spot.name, hit.spot.id);
+    // 传递 spotId 用于 track id（🟡#6）；标记引擎播放（engineArmed），
+    // 完成时写历史/设冷却/出队；失败后"点击重试"也走 { engine: true } 保持引擎语义
+    getPlayer().play(hit.spot.audioUrl, hit.spot.name, hit.spot.id, { engine: true });
   }
 
   // ─── 播放完成回调 ──────────────────────────────────

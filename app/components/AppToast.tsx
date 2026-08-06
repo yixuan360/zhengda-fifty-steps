@@ -47,8 +47,11 @@ export default function AppToast() {
       Animated.timing(opacity, {
         toValue: 0, duration: 300, useNativeDriver: true,
       }).start(({ finished }) => {
-        // 错误提示淡出完成后复位播放状态（对齐旧 AudioBar 行为）
-        if (finished && type === 'error') {
+        // 错误提示淡出完成后复位播放状态（对齐旧 AudioBar 行为）。
+        // 仅当此刻仍是 error 态才复位：用户在淡出窗口点击"重试"/开始新播放会先
+        // setError(null)，此时不能 reset，否则会把进行中的播放打回 idle，
+        // 触发 useTour 误判"播放完成"（审查 HIGH-1）。
+        if (finished && type === 'error' && useAudioStore.getState().state === 'error') {
           useAudioStore.getState().reset();
         }
       });
@@ -72,8 +75,18 @@ export default function AppToast() {
     }
   };
 
+  // 错误 toast 点击 → 重试最近失败的曲目（store.lastFailed）
+  // 标记 { engine: true }：重试视为引擎播放，完成时正常写历史/设冷却/出队
+  const handleErrorTap = () => {
+    const st = useAudioStore.getState();
+    const f = st.lastFailed;
+    if (!f?.url) return;
+    st.setError(null);
+    getPlayer().play(f.url, f.name, f.spotId ?? undefined, { engine: true });
+  };
+
   const shown: { type: ToastType; text: string } | null = error
-    ? { type: 'error', text: error }
+    ? { type: 'error', text: error.message }
     : hint
       ? { type: 'hint', text: hint }
       : null;
@@ -83,10 +96,13 @@ export default function AppToast() {
   return (
     <Animated.View style={[styles.toast, { top: insets.top + 110, opacity }]} pointerEvents="box-none">
       {shown.type === 'error' ? (
-        <View style={[styles.bar, styles.errorBar]}>
-          <Ionicons name="alert-circle" size={14} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={styles.errorText} numberOfLines={2}>{shown.text}</Text>
-        </View>
+        <TouchableOpacity onPress={handleErrorTap} activeOpacity={0.85}>
+          <View style={[styles.bar, styles.errorBar]}>
+            <Ionicons name="alert-circle" size={14} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.errorText} numberOfLines={2}>{shown.text}</Text>
+            <Text style={styles.errorRetryText}>点此重试</Text>
+          </View>
+        </TouchableOpacity>
       ) : (
         <TouchableOpacity onPress={handleHintTap} activeOpacity={0.85}>
           <View style={[styles.bar, styles.hintBar]}>
@@ -117,6 +133,7 @@ const styles = StyleSheet.create({
   },
   errorBar: { backgroundColor: 'rgba(217,74,74,0.94)', borderColor: 'rgba(217,74,74,0.3)' },
   errorText: { color: '#fff', fontSize: 13, fontWeight: '600', flex: 1 },
+  errorRetryText: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginLeft: 8, fontWeight: '700' },
   hintBar: { backgroundColor: 'rgba(198,123,75,0.94)', borderColor: 'rgba(198,123,75,0.3)' },
   hintText: { color: '#fff', fontSize: 12, fontWeight: '600', flex: 1 },
   hintTapText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginLeft: 8, fontWeight: '500' },

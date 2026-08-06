@@ -5,6 +5,7 @@
 import { fetchSpots, fetchConfig } from './api';
 import { replaceAllSpots, replaceAllConfig } from './database';
 import { useTourStore } from '../stores/tourStore';
+import { prefetchAudios } from './cache';
 
 let isSyncing = false;
 
@@ -39,6 +40,10 @@ export async function syncAll(): Promise<SyncResult> {
       if (spotsRes.ok && spotsRes.data.spots) {
         await replaceAllSpots(spotsRes.data.spots);
         result.spotsOk = true;
+        // v7：同步成功后后台预热激活景点音频，触发时直接读本地，弱网也不现场下载失败
+        prefetchAudios(
+          spotsRes.data.spots.filter((s) => s.isActive).map((s) => s.audioUrl),
+        );
       }
     } catch {
       store.setSyncError('景点数据同步失败，使用本地缓存');
