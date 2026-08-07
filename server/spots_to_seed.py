@@ -15,8 +15,15 @@ for s in spots:
         if k in ('created_at', 'image', 'audio'):
             del s[k]
 
-def esc(v):
-    return v.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+def ts_str(v):
+    """转义为合法 TS 字符串字面量（带双引号）。
+
+    用 json.dumps 而非手写 replace：
+    - 生产 DB 文本可能含 CRLF（\\r\\n），裸 \\r 是 ECMAScript 行终止符，
+      手写 esc 只转义 \\n 会把 \\r 原样写入导致 "Unterminated string constant"。
+    - json.dumps 统一处理 \\n、\\r、\\r\\n、引号、反斜杠，输出与 TS 双引号字符串兼容。
+    """
+    return json.dumps(str(v), ensure_ascii=False)
 
 lines = []
 lines.append('/**')
@@ -49,10 +56,10 @@ for sp in spots:
     if trig:
         trig_json = json.dumps(trig, ensure_ascii=False)
         trig_arg = f',\n    {trig_json}'
-    lines.append(f'  s({sp["id"]}, "{esc(sp["name"])}", {sp["lat"]}, {sp["lng"]}, {sp["trigger_radius"]},')
-    lines.append(f'    "{esc(sp["summary"])}",')
-    lines.append(f'    "{esc(sp["description"])}",')
-    lines.append(f'    "{esc(cat)}"{trig_arg}),')
+    lines.append(f'  s({sp["id"]}, {ts_str(sp["name"])}, {sp["lat"]}, {sp["lng"]}, {sp["trigger_radius"]},')
+    lines.append(f'    {ts_str(sp["summary"])},')
+    lines.append(f'    {ts_str(sp["description"])},')
+    lines.append(f'    {ts_str(cat)}{trig_arg}),')
 
 lines.append('];')
 lines.append('')
