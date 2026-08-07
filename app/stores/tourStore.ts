@@ -83,13 +83,14 @@ export const useTourStore = create<TourState>((set, get) => ({
   clearQueue: () => set({ queue: [] }),
   setCooldown: (spotId) =>
     set((s) => ({ cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 } })),
-  clearCooldown: (spotId) =>
+  clearCooldown: (spotId) => {
+    if (!(spotId in get().cooldowns)) return;
     set((s) => {
-      if (!(spotId in s.cooldowns)) return {};
       const cooldowns = { ...s.cooldowns };
       delete cooldowns[spotId];
       return { cooldowns };
-    }),
+    });
+  },
   isInCooldown: (spotId) => {
     const until = get().cooldowns[spotId];
     return until != null && Date.now() < until;
