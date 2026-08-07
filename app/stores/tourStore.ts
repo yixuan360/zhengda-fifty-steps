@@ -36,6 +36,7 @@ interface TourState {
   dequeue: () => HitSpot | undefined;
   clearQueue: () => void;
   setCooldown: (spotId: number) => void;
+  clearCooldown: (spotId: number) => void;   // ← 新增
   isInCooldown: (spotId: number) => boolean;
   setSpots: (spots: Spot[]) => void;
   setIsSyncing: (v: boolean) => void;
@@ -80,6 +81,13 @@ export const useTourStore = create<TourState>((set, get) => ({
   clearQueue: () => set({ queue: [] }),
   setCooldown: (spotId) =>
     set((s) => ({ cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 } })),
+  clearCooldown: (spotId) =>
+    set((s) => {
+      if (!(spotId in s.cooldowns)) return {};
+      const cooldowns = { ...s.cooldowns };
+      delete cooldowns[spotId];
+      return { cooldowns };
+    }),
   isInCooldown: (spotId) => {
     const until = get().cooldowns[spotId];
     return until != null && Date.now() < until;

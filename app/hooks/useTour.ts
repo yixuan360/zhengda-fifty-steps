@@ -128,6 +128,8 @@ export function useTour() {
         }
       } else if (d > BUFFER_METERS && enteredSpotIds.current.has(spot.id)) {
         enteredSpotIds.current.delete(spot.id);
+        // Step 0：离开围栏即清除冷却 → 重新进入可再次触发（双条件）
+        useTourStore.getState().clearCooldown(spot.id);
       }
     }
 

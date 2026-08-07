@@ -29,6 +29,7 @@ execFileSync(process.execPath, [
   path.join('utils', 'trigger.ts'),
   path.join('utils', 'distance.ts'),
   path.join('types', 'index.ts'),
+  path.join('stores', 'tourStore.ts'),
   '--outDir', OUT,
   '--module', 'commonjs',
   '--target', 'es2020',
@@ -145,6 +146,26 @@ for (let i = 0; i < 2000; i++) {
   }
 }
 ok(`${checked} 次进出判定与旧逻辑完全一致`, diffFail === 0);
+
+// ── 8. 冷却双条件 ──────────────────────────────────────
+console.log('\n[6] 冷却：过期 + clearCooldown（Step 0）');
+const { useTourStore } = require(path.join(OUT, 'stores', 'tourStore.js'));
+const realNow = Date.now;
+let fakeNow = 1_000_000;
+Date.now = () => fakeNow;
+try {
+  const st = useTourStore.getState();
+  st.setCooldown(5);
+  ok('设冷却后 isInCooldown=true', st.isInCooldown(5));
+  fakeNow += 61_000;
+  ok('60s 后自然过期 false', !st.isInCooldown(5));
+  st.setCooldown(7);
+  st.clearCooldown(7);
+  ok('clearCooldown 后立即 false', !st.isInCooldown(7));
+  ok('未设冷却的 spot 默认 false', !st.isInCooldown(999));
+} finally {
+  Date.now = realNow;
+}
 
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });
