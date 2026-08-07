@@ -8,6 +8,8 @@ import type { Spot, HitSpot, CategoryInfo, AccuracyLevel } from '../types';
 export interface TriggerLogEntry {
   spotName: string;
   at: number;
+  confidence?: number;      // 本次播放的置信度（行为感知景点）
+  reason?: string;          // 触发语义
 }
 
 const RECENT_LIMIT = 10;
@@ -49,7 +51,7 @@ interface TourState {
   setNewSpotHint: (hint: string | null) => void;
   switchToNext: () => HitSpot | undefined;
   setCategories: (cats: CategoryInfo[]) => void;
-  logTrigger: (spotName: string) => void;
+  logTrigger: (spotName: string, meta?: { confidence?: number; reason?: string }) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -109,8 +111,8 @@ export const useTourStore = create<TourState>((set, get) => ({
     return next;
   },
   setCategories: (cats) => set({ categories: cats }),
-  logTrigger: (spotName) =>
+  logTrigger: (spotName, meta) =>
     set((s) => ({
-      triggerLog: [...s.triggerLog, { spotName, at: Date.now() }].slice(-RECENT_LIMIT),
+      triggerLog: [...s.triggerLog, { spotName, at: Date.now(), ...meta }].slice(-RECENT_LIMIT),
     })),
 }));

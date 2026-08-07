@@ -19,11 +19,23 @@ import { getTriggerSignedDistance } from '../utils/trigger';
 import { insertPlayHistory } from '../services/database';
 import { getPlayer } from './useAudioPlayer';
 import type { LatLng, HitSpot } from '../types';
+import {
+  evaluateSpatialTrigger,
+  nextConfirmCount,
+  DEFAULT_CONFIDENCE_THRESHOLD,
+  DEFAULT_MIN_MOVEMENT_DISTANCE,
+  DEFAULT_PATH_CONFIRM_SAMPLES,
+} from '../utils/spatial/triggerEvaluator';
+import { computeMovement } from '../utils/spatial/mapMatcher';
 
 const BUFFER_METERS = 20; // 滞回缓冲带宽度（米）
 
 export function useTour() {
   const enteredSpotIds = useRef<Set<number>>(new Set());
+  /** 位置历史（窗口 ≤12 个点，约 12s），用于计算移动段航向 */
+  const positionHistory = useRef<LatLng[]>([]);
+  /** directionCheck 景点的连续空间命中计数（轨迹确认） */
+  const confirmCounts = useRef<Record<number, number>>({});
   const currentSpotId = useRef<number | null>(null);
   /** 🟢#13: setTimeout ID，cleanup 时清除 */
   const dequeueTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,6 +102,8 @@ export function useTour() {
     return useTourStore.subscribe((state, prevState) => {
       if (prevState.mockLocation != null && state.mockLocation == null) {
         enteredSpotIds.current.clear();
+        confirmCounts.current = {};
+        positionHistory.current = [];
       }
     });
   }, []);
@@ -107,20 +121,56 @@ export function useTour() {
   // ─── 核心：处理位置更新 ──────────────────────────────
   function processLocationUpdate(userLoc: LatLng): void {
     const { spots, isAccuracyGood, isInCooldown } = useTourStore.getState();
-
     if (!isAccuracyGood) return;
     if (spots.length === 0) return;
+
+    // 移动段航向：窗口内找第一个间距 ≥ 8m 的历史点算方向（spec §5.5）
+    const history = positionHistory.current;
+    history.push(userLoc);
+    if (history.length > 12) history.shift();
+    const movement = computeMovement(history, DEFAULT_MIN_MOVEMENT_DISTANCE);
+    const store = useTourStore.getState();
 
     const hits: HitSpot[] = [];
 
     for (const spot of spots) {
       if (!spot.isActive) continue;
+      const trigger = spot.trigger;
+      const isDirectionPath = trigger?.type === 'corridor' && trigger.directionCheck === true;
 
-      // v4.1：统一"到区域的有符号距离"——圆/走廊/多边形共用同一标量 d，
-      // d<=0 进围栏，d>BUFFER_METERS 出围栏。圆形与此前 dist<=radius / dist>radius+20
-      // 逐字节等价（d = 圆心距 - radius），存量行为不变。
+      // ── directionCheck corridor：三级判定 + 连续样本确认 ──
+      if (isDirectionPath) {
+        const d = getTriggerSignedDistance(userLoc, spot);
+        if (d <= 0) {
+          const hit = evaluateSpatialTrigger(userLoc, movement, spot);
+          if (hit) {
+            const n = nextConfirmCount(confirmCounts.current[spot.id] ?? 0, true);
+            confirmCounts.current[spot.id] = n;
+            if (
+              n >= DEFAULT_PATH_CONFIRM_SAMPLES &&
+              !isInCooldown(spot.id) &&
+              hit.confidence >= DEFAULT_CONFIDENCE_THRESHOLD
+            ) {
+              confirmCounts.current[spot.id] = 0; // 已触发，复位计数
+              hits.push({
+                spot,
+                distance: hit.distance,
+                hitAt: Date.now(),
+                confidence: hit.confidence,
+                reason: hit.reason,
+                directionState: hit.directionState,
+              });
+            }
+          }
+        } else if (d > BUFFER_METERS) {
+          confirmCounts.current[spot.id] = 0;
+          store.clearCooldown(spot.id); // 离开围栏清除冷却（Step 0）
+        }
+        continue;
+      }
+
+      // ── 原有 circle/polygon/corridor（无 directionCheck）逻辑不变 ──
       const d = getTriggerSignedDistance(userLoc, spot);
-
       if (d <= 0 && !enteredSpotIds.current.has(spot.id)) {
         enteredSpotIds.current.add(spot.id);
         if (!isInCooldown(spot.id)) {
@@ -128,8 +178,7 @@ export function useTour() {
         }
       } else if (d > BUFFER_METERS && enteredSpotIds.current.has(spot.id)) {
         enteredSpotIds.current.delete(spot.id);
-        // Step 0：离开围栏即清除冷却 → 重新进入可再次触发（双条件）
-        useTourStore.getState().clearCooldown(spot.id);
+        store.clearCooldown(spot.id); // 离开围栏清除冷却（Step 0）
       }
     }
 
@@ -165,7 +214,10 @@ export function useTour() {
     store.setCurrentHit(hit);
     currentSpotId.current = hit.spot.id;
     // 🟢 触发日志（调试面板展示最近触发记录）
-    store.logTrigger(hit.spot.name);
+    store.logTrigger(hit.spot.name, {
+      confidence: hit.confidence,
+      reason: hit.reason,
+    });
     // 传递 spotId 用于 track id（🟡#6）；标记引擎播放（engineArmed），
     // 完成时写历史/设冷却/出队；失败后"点击重试"也走 { engine: true } 保持引擎语义
     getPlayer().play(hit.spot.audioUrl, hit.spot.name, hit.spot.id, { engine: true });
