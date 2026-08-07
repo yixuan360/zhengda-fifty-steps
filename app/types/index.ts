@@ -16,32 +16,14 @@ export interface ApiResponse<T> {
   message: string;
 }
 
-/** 触发语义原因（解释层，不改播放行为） */
-export type TriggerReason =
-  | 'inside_radius'   // circle 命中
-  | 'inside_polygon'  // polygon 命中
-  | 'matched_path'    // corridor 命中（轨迹确认通过）
-  | 'fallback_circle'; // 脏数据退化圆命中
-
-/** 方向置信度状态 */
-export type DirectionState = 'aligned' | 'conflict' | 'unknown';
-
 /** 触发区域几何配置（GCJ-02 全链路统一坐标系） */
 export interface Trigger {
   /** 缺省为 circle：圆心 + triggerRadius（存量行为不变） */
   type: 'circle' | 'corridor' | 'polygon';
-  /** corridor 半宽（米），缺省 15，逐对象配置 */
+  /** corridor 半宽（米），缺省 15 */
   halfWidth?: number;
   /** corridor 折线 / polygon 顶点（按顺序连接；polygon 自动闭合） */
   points?: LatLng[];
-  /** 行为感知（仅 corridor）：开启后按三级判定计算置信度 */
-  directionCheck?: boolean;
-  /** 方向一致判定夹角容差（度），缺省 60 */
-  directionToleranceDeg?: number;
-  /** 计算方向所需最小移动距离（米），缺省 8；低于此 → 方向 unknown */
-  minMovementDistance?: number;
-  /** 关联 Walking Graph 边 ID（可选，供路线故事/调试） */
-  pathId?: string;
 }
 
 /** 景点数据 */
@@ -99,9 +81,6 @@ export interface HitSpot {
   spot: Spot;
   distance: number;      // 距离（米）
   hitAt: number;         // 命中时间戳
-  confidence?: number;       // 0~1（仅行为感知景点）
-  reason?: TriggerReason;    // 触发语义
-  directionState?: DirectionState;
 }
 
 /** 全局配置 key-value */

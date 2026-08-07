@@ -30,8 +30,6 @@ execFileSync(process.execPath, [
   path.join('utils', 'distance.ts'),
   path.join('types', 'index.ts'),
   path.join('stores', 'tourStore.ts'),
-  path.join('utils', 'spatial', 'mapMatcher.ts'),
-  path.join('utils', 'spatial', 'triggerEvaluator.ts'),
   '--outDir', OUT,
   '--module', 'commonjs',
   '--target', 'es2020',
@@ -168,89 +166,6 @@ try {
 } finally {
   Date.now = realNow;
 }
-
-// ── 9. 方位角工具 ─────────────────────────────────────
-console.log('\n[7] bearing / angleDiff');
-const { bearing, angleDiff } = require(path.join(OUT, 'utils', 'distance.js'));
-ok('bearing 正北=0', approx(bearing({ lat: 0, lng: 0 }, { lat: 0.01, lng: 0 }), 0, 0.1));
-ok('bearing 正东=90', approx(bearing({ lat: 0, lng: 0 }, { lat: 0, lng: 0.01 }), 90, 0.1));
-ok('bearing 正南=180', approx(bearing({ lat: 0, lng: 0 }, { lat: -0.01, lng: 0 }), 180, 0.1));
-ok('bearing 正西=270', approx(bearing({ lat: 0, lng: 0 }, { lat: 0, lng: -0.01 }), 270, 0.1));
-ok('angleDiff(30,60)=30', approx(angleDiff(30, 60), 30, 0.001));
-ok('angleDiff(350,10)=20', approx(angleDiff(350, 10), 20, 0.001));
-ok('angleDiff(0,180)=180', approx(angleDiff(0, 180), 180, 0.001));
-
-// ── 10. mapMatcher ─────────────────────────────────────
-console.log('\n[8] mapMatcher：投影 + 航向');
-const { matchToPath, computeMovement } = require(path.join(OUT, 'utils', 'spatial', 'mapMatcher.js'));
-const seg = [
-  { lat: 34.815, lng: 113.536 },
-  { lat: 34.817, lng: 113.536 },  // 自南向北，bearing=0
-];
-const r = matchToPath({ lat: 34.816, lng: 113.536 }, 0, seg, 'bridge001'); // 线上中点
-ok('距离≈0', approx(r.distance, 0, 0.01));
-ok('tangentBearing=0(北)', approx(r.tangentBearing, 0, 0.1));
-ok('heading 0 → angleDeg=0', approx(r.angleDeg, 0, 0.01));
-ok('progress≈0.5', approx(r.progress, 0.5, 0.01));
-ok('alongDistance≈总长一半', approx(r.alongDistance, r.totalLength / 2, 0.5));
-ok('corridorId 透传', r.corridorId === 'bridge001');
-ok('heading 180 → angleDeg=180', approx(matchToPath({ lat: 34.816, lng: 113.536 }, 180, seg, 'x').angleDeg, 180, 0.01));
-ok('历史不足2点 → null', computeMovement([{ lat: 1, lng: 1 }], 8).bearingDeg === null);
-const hist = [
-  { lat: 34.816, lng: 113.536 },
-  { lat: 34.817, lng: 113.536 },  // 北移 ~110.9m
-];
-const mv = computeMovement(hist, 8);
-ok('移动≥8m → bearing=0(北)', approx(mv.bearingDeg, 0, 0.5));
-ok('segmentMeters≈110.9', approx(mv.segmentMeters, 110.9, 1));
-ok('移动<8m → bearingDeg=null', computeMovement([
-  { lat: 34.816, lng: 113.536 },
-  { lat: 34.81607, lng: 113.536 },  // ~7.8m
-], 8).bearingDeg === null);
-
-// ── 11. triggerEvaluator 三级判定 ─────────────────────
-console.log('\n[9] triggerEvaluator：空间 → 轨迹 → 方向置信度');
-const { evaluateSpatialTrigger, nextConfirmCount, sanitizeTrigger, DEFAULT_CONFIDENCE_THRESHOLD } =
-  require(path.join(OUT, 'utils', 'spatial', 'triggerEvaluator.js'));
-const bridge = spot({ trigger: {
-  type: 'corridor', halfWidth: 6, directionCheck: true,
-  directionToleranceDeg: 60, minMovementDistance: 8, pathId: 'bridge001',
-  points: [{ lat: 34.815, lng: 113.536 }, { lat: 34.817, lng: 113.536 }],
-} });
-const onLine = { lat: 34.816, lng: 113.536 };
-let h = evaluateSpatialTrigger(onLine, { bearingDeg: 0, segmentMeters: 110 }, bridge); // 顺向
-ok('顺向 aligned=0.9', h && approx(h.confidence, 0.9, 0.001) && h.directionState === 'aligned');
-ok('顺向 ≥ 阈值可播', h && h.confidence >= DEFAULT_CONFIDENCE_THRESHOLD);
-h = evaluateSpatialTrigger(onLine, { bearingDeg: 180, segmentMeters: 110 }, bridge);   // 反向
-ok('逆向 conflict=0.4', h && approx(h.confidence, 0.4, 0.001) && h.directionState === 'conflict');
-ok('逆向 < 阈值不播', h && h.confidence < DEFAULT_CONFIDENCE_THRESHOLD);
-h = evaluateSpatialTrigger(onLine, { bearingDeg: 0, segmentMeters: 2 }, bridge);        // 移动不足
-ok('移动<8m unknown=0(pending)', h && approx(h.confidence, 0, 0.001) && h.directionState === 'unknown');
-ok('移动<8m unknown < 阈值不播', h && h.confidence < DEFAULT_CONFIDENCE_THRESHOLD);
-h = evaluateSpatialTrigger(onLine, null, bridge);                                       // 无航向
-ok('无 movement unknown=0(pending)', h && approx(h.confidence, 0, 0.001));
-ok('距离超半宽 → null', evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 + 30 / METER_LNG }, { bearingDeg: 0, segmentMeters: 110 }, bridge) === null);
-const plain = spot({ trigger: { type: 'corridor', halfWidth: 20, points: [{ lat: 34.815, lng: 113.536 }, { lat: 34.817, lng: 113.536 }] } });
-h = evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 }, null, plain);
-ok('无方向 corridor confidence=1', h && h.confidence === 1 && h.reason === 'matched_path');
-h = evaluateSpatialTrigger({ lat: 34.817, lng: 113.5375 }, null, circle);
-ok('圆形 reason=inside_radius', h && h.reason === 'inside_radius' && h.confidence === 1);
-ok('连续2次计数=2', nextConfirmCount(nextConfirmCount(0, true), true) === 2);
-ok('中断清零', nextConfirmCount(3, false) === 0);
-ok('非法容差 → undefined', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionToleranceDeg: 999 }) === undefined);
-ok('合法新字段通过', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionCheck: true }) !== undefined);
-
-// ── 12. 真实桥数据（seed 碧玉桥）验证：区域内即播 ───────────
-console.log('\n[10] 碧玉桥 seed 数据：走廊触发（简化决定 2026-08-08）');
-const bridgeSeed = spot({ trigger: {
-  type: 'corridor', halfWidth: 8,
-  points: [{ lat: 34.816332, lng: 113.534242 }, { lat: 34.816308, lng: 113.534562 }],
-} });
-const bMid = { lat: 34.81632, lng: 113.534402 }; // 桥中心（用户实测中心点）
-h = evaluateSpatialTrigger(bMid, null, bridgeSeed);
-ok('桥中心触发 confidence=1', h && h.confidence === 1 && h.reason === 'matched_path');
-ok('桥北 10m 路过 → 空间未命中 null', evaluateSpatialTrigger({ lat: 34.81632 + 10 / METER_LAT, lng: 113.534402 }, null, bridgeSeed) === null);
-ok('桥东端线上触发', evaluateSpatialTrigger({ lat: 34.81631, lng: 113.5345 }, null, bridgeSeed) !== null);
 
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });

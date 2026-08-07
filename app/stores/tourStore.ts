@@ -8,9 +8,6 @@ import type { Spot, HitSpot, CategoryInfo, AccuracyLevel } from '../types';
 export interface TriggerLogEntry {
   spotName: string;
   at: number;
-  confidence?: number;      // 本次播放的置信度（行为感知景点）
-  reason?: string;          // 触发语义
-  directionState?: string;  // aligned/unknown/conflict（行为感知景点）
 }
 
 const RECENT_LIMIT = 10;
@@ -52,7 +49,7 @@ interface TourState {
   setNewSpotHint: (hint: string | null) => void;
   switchToNext: () => HitSpot | undefined;
   setCategories: (cats: CategoryInfo[]) => void;
-  logTrigger: (spotName: string, meta?: { confidence?: number; reason?: string; directionState?: string }) => void;
+  logTrigger: (spotName: string) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
@@ -84,14 +81,13 @@ export const useTourStore = create<TourState>((set, get) => ({
   clearQueue: () => set({ queue: [] }),
   setCooldown: (spotId) =>
     set((s) => ({ cooldowns: { ...s.cooldowns, [spotId]: Date.now() + 60_000 } })),
-  clearCooldown: (spotId) => {
-    if (!(spotId in get().cooldowns)) return;
+  clearCooldown: (spotId) =>
     set((s) => {
+      if (!(spotId in s.cooldowns)) return {};
       const cooldowns = { ...s.cooldowns };
       delete cooldowns[spotId];
       return { cooldowns };
-    });
-  },
+    }),
   isInCooldown: (spotId) => {
     const until = get().cooldowns[spotId];
     return until != null && Date.now() < until;
@@ -113,8 +109,8 @@ export const useTourStore = create<TourState>((set, get) => ({
     return next;
   },
   setCategories: (cats) => set({ categories: cats }),
-  logTrigger: (spotName, meta) =>
+  logTrigger: (spotName) =>
     set((s) => ({
-      triggerLog: [...s.triggerLog, { spotName, at: Date.now(), ...meta }].slice(-RECENT_LIMIT),
+      triggerLog: [...s.triggerLog, { spotName, at: Date.now() }].slice(-RECENT_LIMIT),
     })),
 }));
