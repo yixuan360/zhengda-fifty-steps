@@ -112,13 +112,17 @@ function parseTrigger(raw: string | null | undefined): Spot['trigger'] {
   try {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
-      // 结构校验：corridor/polygon 必须带坐标数组，否则视为损坏回落圆形。
+      const { type } = parsed;
+      // 结构校验：与 server validate_trigger 同规则（类型白名单 + corridor≥2/polygon≥3 点），
+      // 损坏或不支持的 trigger 回落圆形兜底。
       // 仅校验 type 会放过 {type:'polygon', points:'garbage'} 这类合法 JSON，
       // 后续 points.map 直接抛错，打穿兜底。
-      if (parsed.type !== 'circle') {
+      if (type !== 'circle' && type !== 'corridor' && type !== 'polygon') return undefined;
+      if (type !== 'circle') {
+        const minPoints = type === 'corridor' ? 2 : 3;
         if (
           !Array.isArray(parsed.points) ||
-          parsed.points.length === 0 ||
+          parsed.points.length < minPoints ||
           !parsed.points.every(
             (p: unknown) =>
               !!p &&

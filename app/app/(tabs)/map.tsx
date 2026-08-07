@@ -217,18 +217,31 @@ export default function MapScreen() {
     setEditorSaving(true);
     setEditorMsg(null);
     try {
+      let newId: number | undefined;
       if (editorSpotId == null) {
         const name = editorName.trim();
         if (!name) { setEditorMsg('新建景点需填写名称'); setEditorSaving(false); return; }
         const anchor = editorDraft[0] ?? { lat: 34.816, lng: 113.534 };
-        await createSpot({ name, lat: anchor.lat, lng: anchor.lng, triggerRadius: 50, ...payload });
+        const res = await createSpot({ name, lat: anchor.lat, lng: anchor.lng, triggerRadius: 50, ...payload });
+        newId = res?.data?.id;
       } else {
         await updateSpot(editorSpotId, payload);
       }
+      // 新建成功后绑定到新 id：避免再次点保存时重复创建（DB 是真源，重复行会持久）
+      if (newId != null) setEditorSpotId(newId);
+      setEditorDraft([]);
       setEditorMsg('✅ 已保存，正在刷新...');
-      syncAll().catch(() => {}); // 刷新景点列表
-    } catch {
-      setEditorMsg('❌ 保存失败：检查编辑器密钥与网络');
+      // 刷新失败与保存失败分开处理，避免"保存成功却提示失败"
+      try {
+        await syncAll();
+        setEditorMsg('✅ 已保存');
+      } catch {
+        setEditorMsg('✅ 已保存（列表刷新失败，可稍后重试）');
+      }
+    } catch (e) {
+      // 透出服务端校验 message（坐标越界 / trigger 结构无效 / 密钥错误等），便于排查
+      const serverMsg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setEditorMsg(`❌ 保存失败：${serverMsg || '检查编辑器密钥与网络'}`);
     } finally {
       setEditorSaving(false);
     }

@@ -58,8 +58,11 @@ class PingView(APIView):
     permission_classes = []
 
     def post(self, request):
-        dev = request.data.get('deviceId', '') if request.data else ''
-        ver = request.data.get('version', '1.0.0') if request.data else '1.0.0'
+        # 全局 CamelCaseJSONParser 会把请求里的 deviceId 改写为 device_id，
+        # 因此优先读 snake_case，再兼容直传 camelCase 的调用方。
+        data = request.data or {}
+        dev = data.get('device_id') or data.get('deviceId', '')
+        ver = data.get('version', '1.0.0')
         hashed = hashlib.sha256((dev or str(uuid.uuid4())).encode()).hexdigest()[:16]
 
         # 使用服务器配置的时区确定日期边界
