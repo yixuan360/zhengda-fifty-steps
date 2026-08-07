@@ -4,7 +4,8 @@
  * 启动时检测表存在 → 不存在则建表 → 已存在直接用（不用 Migration 框架）
  */
 import * as SQLite from 'expo-sqlite';
-import type { Spot, GlobalConfig, LatLng } from '../types';
+import { sanitizeTrigger } from '../utils/spatial/triggerEvaluator';
+import type { Spot, GlobalConfig } from '../types';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -111,26 +112,7 @@ function parseTrigger(raw: string | null | undefined): Spot['trigger'] {
   if (!raw) return undefined;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
-      // 结构校验：corridor/polygon 必须带坐标数组，否则视为损坏回落圆形。
-      // 仅校验 type 会放过 {type:'polygon', points:'garbage'} 这类合法 JSON，
-      // 后续 points.map 直接抛错，打穿兜底。
-      if (parsed.type !== 'circle') {
-        if (
-          !Array.isArray(parsed.points) ||
-          parsed.points.length === 0 ||
-          !parsed.points.every(
-            (p: unknown) =>
-              !!p &&
-              typeof (p as LatLng).lat === 'number' &&
-              typeof (p as LatLng).lng === 'number',
-          )
-        ) {
-          return undefined;
-        }
-      }
-      return parsed as Spot['trigger'];
-    }
+    return sanitizeTrigger(parsed);
   } catch { /* 数据损坏则回落圆形 */ }
   return undefined;
 }

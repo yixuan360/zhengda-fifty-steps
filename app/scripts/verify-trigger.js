@@ -31,6 +31,7 @@ execFileSync(process.execPath, [
   path.join('types', 'index.ts'),
   path.join('stores', 'tourStore.ts'),
   path.join('utils', 'spatial', 'mapMatcher.ts'),
+  path.join('utils', 'spatial', 'triggerEvaluator.ts'),
   '--outDir', OUT,
   '--module', 'commonjs',
   '--target', 'es2020',
@@ -206,6 +207,37 @@ ok('移动<8m → bearingDeg=null', computeMovement([
   { lat: 34.816, lng: 113.536 },
   { lat: 34.81607, lng: 113.536 },  // ~7.8m
 ], 8).bearingDeg === null);
+
+// ── 11. triggerEvaluator 三级判定 ─────────────────────
+console.log('\n[9] triggerEvaluator：空间 → 轨迹 → 方向置信度');
+const { evaluateSpatialTrigger, nextConfirmCount, sanitizeTrigger, DEFAULT_CONFIDENCE_THRESHOLD } =
+  require(path.join(OUT, 'utils', 'spatial', 'triggerEvaluator.js'));
+const bridge = spot({ trigger: {
+  type: 'corridor', halfWidth: 6, directionCheck: true,
+  directionToleranceDeg: 60, minMovementDistance: 8, pathId: 'bridge001',
+  points: [{ lat: 34.815, lng: 113.536 }, { lat: 34.817, lng: 113.536 }],
+} });
+const onLine = { lat: 34.816, lng: 113.536 };
+let h = evaluateSpatialTrigger(onLine, { bearingDeg: 0, segmentMeters: 110 }, bridge); // 顺向
+ok('顺向 aligned=0.9', h && approx(h.confidence, 0.9, 0.001) && h.directionState === 'aligned');
+ok('顺向 ≥ 阈值可播', h && h.confidence >= DEFAULT_CONFIDENCE_THRESHOLD);
+h = evaluateSpatialTrigger(onLine, { bearingDeg: 180, segmentMeters: 110 }, bridge);   // 反向
+ok('逆向 conflict=0.4', h && approx(h.confidence, 0.4, 0.001) && h.directionState === 'conflict');
+ok('逆向 < 阈值不播', h && h.confidence < DEFAULT_CONFIDENCE_THRESHOLD);
+h = evaluateSpatialTrigger(onLine, { bearingDeg: 0, segmentMeters: 2 }, bridge);        // 移动不足
+ok('移动<8m unknown=0.7', h && approx(h.confidence, 0.7, 0.001) && h.directionState === 'unknown');
+h = evaluateSpatialTrigger(onLine, null, bridge);                                       // 无航向
+ok('无 movement unknown=0.7', h && approx(h.confidence, 0.7, 0.001));
+ok('距离超半宽 → null', evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 + 30 / METER_LNG }, { bearingDeg: 0, segmentMeters: 110 }, bridge) === null);
+const plain = spot({ trigger: { type: 'corridor', halfWidth: 20, points: [{ lat: 34.815, lng: 113.536 }, { lat: 34.817, lng: 113.536 }] } });
+h = evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 }, null, plain);
+ok('无方向 corridor confidence=1', h && h.confidence === 1 && h.reason === 'matched_path');
+h = evaluateSpatialTrigger({ lat: 34.817, lng: 113.5375 }, null, circle);
+ok('圆形 reason=inside_radius', h && h.reason === 'inside_radius' && h.confidence === 1);
+ok('连续2次计数=2', nextConfirmCount(nextConfirmCount(0, true), true) === 2);
+ok('中断清零', nextConfirmCount(3, false) === 0);
+ok('非法容差 → undefined', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionToleranceDeg: 999 }) === undefined);
+ok('合法新字段通过', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionCheck: true }) !== undefined);
 
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });
