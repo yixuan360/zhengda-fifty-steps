@@ -1,0 +1,99 @@
+"""
+景点编辑器写 API 测试
+覆盖：编辑器密钥鉴权、trigger 结构校验、坐标范围校验、创建/更新/删除
+"""
+from django.test import TestCase, override_settings
+from apps.spots.models import Spot
+
+EDITOR_KEY = 'test-editor-key'
+
+
+@override_settings(EDITOR_KEY=EDITOR_KEY)
+class SpotWriteAPITest(TestCase):
+    def _url(self, pk=None):
+        return f'/api/v1/spots/write/{pk}/' if pk else '/api/v1/spots/write/'
+
+    def _headers(self, key=None):
+        return {'HTTP_X_EDITOR_KEY': key or EDITOR_KEY, 'content_type': 'application/json'}
+
+    # ── 鉴权 ──────────────────────────────────────────
+    def test_missing_key_forbidden(self):
+        resp = self.client.post(self._url(), data={'name': 'x', 'lat': 34.816, 'lng': 113.534})
+        self.assertEqual(resp.status_code, 403)
+
+    def test_wrong_key_forbidden(self):
+        resp = self.client.post(self._url(), data={'name': 'x', 'lat': 34.816, 'lng': 113.534},
+                                **self._headers('wrong'))
+        self.assertEqual(resp.status_code, 403)
+
+    # ── 创建 ──────────────────────────────────────────
+    def test_create_corridor_ok(self):
+        payload = {
+            'name': '测试桥',
+            'lat': 34.81632,
+            'lng': 113.534402,
+            'triggerRadius': 50,
+            'trigger': {'type': 'corridor', 'halfWidth': 8, 'points': [
+                {'lat': 34.816332, 'lng': 113.534242},
+                {'lat': 34.816308, 'lng': 113.534562},
+            ]},
+        }
+        resp = self.client.post(self._url(), data=payload, **self._headers())
+        self.assertEqual(resp.status_code, 201)
+        self.assertTrue(resp.json()['ok'])
+        spot = Spot.objects.get(name='测试桥')
+        self.assertEqual(spot.trigger['type'], 'corridor')
+        self.assertEqual(len(spot.trigger['points']), 2)
+
+    def test_create_missing_name_bad(self):
+        resp = self.client.post(self._url(), data={'lat': 34.816, 'lng': 113.534}, **self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_create_coord_out_of_campus_bad(self):
+        resp = self.client.post(self._url(), data={'name': 'x', 'lat': 40.0, 'lng': 116.0}, **self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_create_invalid_trigger_bad(self):
+        payload = {'name': 'x', 'lat': 34.816, 'lng': 113.534,
+                   'trigger': {'type': 'polygon', 'points': ['garbage']}}
+        resp = self.client.post(self._url(), data=payload, **self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_create_unknown_type_bad(self):
+        payload = {'name': 'x', 'lat': 34.816, 'lng': 113.534,
+                   'trigger': {'type': 'path'}}
+        resp = self.client.post(self._url(), data=payload, **self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    # ── 更新 ──────────────────────────────────────────
+    def test_patch_trigger_ok(self):
+        spot = Spot.objects.create(name='原景', lat=34.816, lng=113.534)
+        payload = {'trigger': {'type': 'polygon', 'points': [
+            {'lat': 34.816, 'lng': 113.534}, {'lat': 34.817, 'lng': 113.534},
+            {'lat': 34.817, 'lng': 113.535},
+        ]}}
+        resp = self.client.patch(self._url(spot.id), data=payload, **self._headers())
+        self.assertEqual(resp.status_code, 200)
+        spot.refresh_from_db()
+        self.assertEqual(spot.trigger['type'], 'polygon')
+        self.assertEqual(len(spot.trigger['points']), 3)
+
+    def test_patch_nonexistent_404(self):
+        resp = self.client.patch(self._url(99999), data={'trigger': None}, **self._headers())
+        self.assertEqual(resp.status_code, 404)
+
+    def test_patch_trigger_none_clears_geometry(self):
+        spot = Spot.objects.create(name='圆景', lat=34.816, lng=113.534, trigger={
+            'type': 'corridor', 'points': [{'lat': 34.816, 'lng': 113.534}, {'lat': 34.817, 'lng': 113.534}],
+        })
+        resp = self.client.patch(self._url(spot.id), data={'trigger': None}, **self._headers())
+        self.assertEqual(resp.status_code, 200)
+        spot.refresh_from_db()
+        self.assertIsNone(spot.trigger)
+
+    # ── 删除 ──────────────────────────────────────────
+    def test_delete_ok(self):
+        spot = Spot.objects.create(name='待删', lat=34.816, lng=113.534)
+        resp = self.client.delete(self._url(spot.id), **self._headers())
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Spot.objects.filter(id=spot.id).exists())

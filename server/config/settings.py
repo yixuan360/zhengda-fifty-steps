@@ -14,6 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env_config('SECRET_KEY', default='dev-secret-key-change-in-production')
 DEBUG = env_config('DEBUG', default=True, cast=bool)
 
+# 景点编辑器写 API 密钥（X-Editor-Key 头比对；课程项目简化鉴权，非完整 RBAC）
+EDITOR_KEY = env_config('EDITOR_KEY', default='')
+
 ALLOWED_HOSTS = env_config(
     'ALLOWED_HOSTS',
     default='localhost,127.0.0.1,10.0.2.2,testserver',
