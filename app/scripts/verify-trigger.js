@@ -240,6 +240,20 @@ ok('中断清零', nextConfirmCount(3, false) === 0);
 ok('非法容差 → undefined', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionToleranceDeg: 999 }) === undefined);
 ok('合法新字段通过', sanitizeTrigger({ type: 'corridor', points: [{ lat: 1, lng: 1 }, { lat: 2, lng: 2 }], directionCheck: true }) !== undefined);
 
+// ── 12. 真实桥数据（seed 碧玉桥）验证 ─────────────────────
+console.log('\n[10] 碧玉桥 seed 数据：轴线/方向/旁路');
+const bridgeSeed = spot({ trigger: {
+  type: 'corridor', halfWidth: 6, directionCheck: true,
+  directionToleranceDeg: 60, minMovementDistance: 8, pathId: 'bridge001',
+  points: [{ lat: 34.816332, lng: 113.534242 }, { lat: 34.816308, lng: 113.534562 }],
+} });
+const bMid = { lat: 34.81632, lng: 113.534402 }; // 桥中心（用户实测中心点）
+h = evaluateSpatialTrigger(bMid, { bearingDeg: 95, segmentMeters: 12 }, bridgeSeed); // 顺向（自西向东）
+ok('桥中心顺向 aligned=0.9', h && approx(h.confidence, 0.9, 0.001) && h.directionState === 'aligned');
+h = evaluateSpatialTrigger(bMid, { bearingDeg: 275, segmentMeters: 12 }, bridgeSeed); // 反向（自东向西）
+ok('桥中心反向 conflict=0.4', h && approx(h.confidence, 0.4, 0.001) && h.directionState === 'conflict');
+ok('桥北 10m 路过 → 空间未命中 null', evaluateSpatialTrigger({ lat: 34.81632 + 10 / METER_LAT, lng: 113.534402 }, { bearingDeg: 95, segmentMeters: 12 }, bridgeSeed) === null);
+
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
