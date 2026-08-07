@@ -11,7 +11,7 @@
  *  2) corridor：线内/线外/半宽/折线拐角
  *  3) polygon：中心深度、外部距离、边界点、开环 ring 自动闭合（回归 H1）
  *  4) 数据异常退化圆形（corridor<2 点 / polygon<3 点 / points 非数组）
- *  5) 74 个真实种子景点 × 2000 随机位置：旧逻辑 vs 新逻辑进出判定对拍
+ *  5) 81 个真实种子景点 × 2000 随机位置：旧逻辑 vs 新逻辑进出判定对拍
  */
 const { execFileSync } = require('child_process');
 const path = require('path');
@@ -119,7 +119,7 @@ const dirty = spot({ lat: 34.816, lng: 113.536, trigger: { type: 'polygon', poin
 ok('points 脏数据(字符串) → 退化圆', approx(getTriggerSignedDistance({ lat: 34.817, lng: 113.537 }, dirty),
   haversineDistance({ lat: 34.817, lng: 113.537 }, { lat: 34.816, lng: 113.536 }) - 50));
 
-// ── 7. 74 个真实种子景点对拍 ─────────────────────────────
+// ── 7. 81 个真实种子景点对拍 ─────────────────────────────
 console.log('\n[5] 真实种子数据对拍：旧逻辑 vs 新逻辑');
 const seedSrc = fs.readFileSync(path.join(APP_ROOT, 'constants', 'seedSpots.ts'), 'utf8');
 const re = /s\((\d+),\s*"([^"]+)",\s*([\d.]+),\s*([\d.]+),\s*(\d+)/g;
