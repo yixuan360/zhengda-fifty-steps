@@ -30,6 +30,7 @@ execFileSync(process.execPath, [
   path.join('utils', 'distance.ts'),
   path.join('types', 'index.ts'),
   path.join('stores', 'tourStore.ts'),
+  path.join('utils', 'spatial', 'mapMatcher.ts'),
   '--outDir', OUT,
   '--module', 'commonjs',
   '--target', 'es2020',
@@ -177,6 +178,34 @@ ok('bearing 正西=270', approx(bearing({ lat: 0, lng: 0 }, { lat: 0, lng: -0.01
 ok('angleDiff(30,60)=30', approx(angleDiff(30, 60), 30, 0.001));
 ok('angleDiff(350,10)=20', approx(angleDiff(350, 10), 20, 0.001));
 ok('angleDiff(0,180)=180', approx(angleDiff(0, 180), 180, 0.001));
+
+// ── 10. mapMatcher ─────────────────────────────────────
+console.log('\n[8] mapMatcher：投影 + 航向');
+const { matchToPath, computeMovement } = require(path.join(OUT, 'utils', 'spatial', 'mapMatcher.js'));
+const seg = [
+  { lat: 34.815, lng: 113.536 },
+  { lat: 34.817, lng: 113.536 },  // 自南向北，bearing=0
+];
+const r = matchToPath({ lat: 34.816, lng: 113.536 }, 0, seg, 'bridge001'); // 线上中点
+ok('距离≈0', approx(r.distance, 0, 0.01));
+ok('tangentBearing=0(北)', approx(r.tangentBearing, 0, 0.1));
+ok('heading 0 → angleDeg=0', approx(r.angleDeg, 0, 0.01));
+ok('progress≈0.5', approx(r.progress, 0.5, 0.01));
+ok('alongDistance≈总长一半', approx(r.alongDistance, r.totalLength / 2, 0.5));
+ok('corridorId 透传', r.corridorId === 'bridge001');
+ok('heading 180 → angleDeg=180', approx(matchToPath({ lat: 34.816, lng: 113.536 }, 180, seg, 'x').angleDeg, 180, 0.01));
+ok('历史不足2点 → null', computeMovement([{ lat: 1, lng: 1 }], 8).bearingDeg === null);
+const hist = [
+  { lat: 34.816, lng: 113.536 },
+  { lat: 34.817, lng: 113.536 },  // 北移 ~110.9m
+];
+const mv = computeMovement(hist, 8);
+ok('移动≥8m → bearing=0(北)', approx(mv.bearingDeg, 0, 0.5));
+ok('segmentMeters≈110.9', approx(mv.segmentMeters, 110.9, 1));
+ok('移动<8m → bearingDeg=null', computeMovement([
+  { lat: 34.816, lng: 113.536 },
+  { lat: 34.81607, lng: 113.536 },  // ~7.8m
+], 8).bearingDeg === null);
 
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });
