@@ -225,9 +225,10 @@ h = evaluateSpatialTrigger(onLine, { bearingDeg: 180, segmentMeters: 110 }, brid
 ok('逆向 conflict=0.4', h && approx(h.confidence, 0.4, 0.001) && h.directionState === 'conflict');
 ok('逆向 < 阈值不播', h && h.confidence < DEFAULT_CONFIDENCE_THRESHOLD);
 h = evaluateSpatialTrigger(onLine, { bearingDeg: 0, segmentMeters: 2 }, bridge);        // 移动不足
-ok('移动<8m unknown=0.7', h && approx(h.confidence, 0.7, 0.001) && h.directionState === 'unknown');
+ok('移动<8m unknown=0(pending)', h && approx(h.confidence, 0, 0.001) && h.directionState === 'unknown');
+ok('移动<8m unknown < 阈值不播', h && h.confidence < DEFAULT_CONFIDENCE_THRESHOLD);
 h = evaluateSpatialTrigger(onLine, null, bridge);                                       // 无航向
-ok('无 movement unknown=0.7', h && approx(h.confidence, 0.7, 0.001));
+ok('无 movement unknown=0(pending)', h && approx(h.confidence, 0, 0.001));
 ok('距离超半宽 → null', evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 + 30 / METER_LNG }, { bearingDeg: 0, segmentMeters: 110 }, bridge) === null);
 const plain = spot({ trigger: { type: 'corridor', halfWidth: 20, points: [{ lat: 34.815, lng: 113.536 }, { lat: 34.817, lng: 113.536 }] } });
 h = evaluateSpatialTrigger({ lat: 34.816, lng: 113.536 }, null, plain);

@@ -118,8 +118,12 @@ export function evaluateSpatialTrigger(
     directionState = result.angleDeg <= tolerance ? 'aligned' : 'conflict';
     confidence = directionState === 'aligned' ? 0.9 : 0.4;
   } else {
+    // 方向未分辨（静止/抖动/样本不足）→ pending 语义：
+    // 置信度 0 低于阈值，不直接可播。调用方（useTour）在连续空间命中计数
+    // 窗口内等待轨迹分辨——后续样本变 aligned(0.9) 即播，一直 unknown 则不播。
+    // （修正前 unknown=0.7 恰等于阈值，导致停留用户每 60s 冷却后循环播）
     directionState = 'unknown';
-    confidence = 0.7;
+    confidence = 0;
   }
 
   return {

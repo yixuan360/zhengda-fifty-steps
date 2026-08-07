@@ -138,7 +138,10 @@ export function useTour() {
       const trigger = spot.trigger;
       const isDirectionPath = trigger?.type === 'corridor' && trigger.directionCheck === true;
 
-      // ── directionCheck corridor：三级判定 + 连续样本确认 ──
+      // ── directionCheck corridor：三级判定 + 轨迹确认（pending 语义）──
+      // 空间命中(d≤0) → 连续样本计数 → 方向置信度。
+      // unknown(方向未分辨,confidence=0)不直接可播：计数在 pending 窗口累积，
+      // 直到轨迹分辨为 aligned(0.9) 才播；停留者恒 unknown → 永不播（无 60s 循环）。
       if (isDirectionPath) {
         const d = getTriggerSignedDistance(userLoc, spot);
         if (d <= 0) {
@@ -213,10 +216,11 @@ export function useTour() {
     const store = useTourStore.getState();
     store.setCurrentHit(hit);
     currentSpotId.current = hit.spot.id;
-    // 🟢 触发日志（调试面板展示最近触发记录）
+    // 🟢 触发日志（调试面板展示最近触发记录，含方向置信度状态）
     store.logTrigger(hit.spot.name, {
       confidence: hit.confidence,
       reason: hit.reason,
+      directionState: hit.directionState,
     });
     // 传递 spotId 用于 track id（🟡#6）；标记引擎播放（engineArmed），
     // 完成时写历史/设冷却/出队；失败后"点击重试"也走 { engine: true } 保持引擎语义

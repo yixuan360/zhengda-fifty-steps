@@ -10,6 +10,7 @@ export interface TriggerLogEntry {
   at: number;
   confidence?: number;      // 本次播放的置信度（行为感知景点）
   reason?: string;          // 触发语义
+  directionState?: string;  // aligned/unknown/conflict（行为感知景点）
 }
 
 const RECENT_LIMIT = 10;
@@ -51,7 +52,7 @@ interface TourState {
   setNewSpotHint: (hint: string | null) => void;
   switchToNext: () => HitSpot | undefined;
   setCategories: (cats: CategoryInfo[]) => void;
-  logTrigger: (spotName: string, meta?: { confidence?: number; reason?: string }) => void;
+  logTrigger: (spotName: string, meta?: { confidence?: number; reason?: string; directionState?: string }) => void;
 }
 
 export const useTourStore = create<TourState>((set, get) => ({
