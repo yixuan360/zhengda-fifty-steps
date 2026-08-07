@@ -345,11 +345,12 @@ Django Admin 保留为**兜底编辑**（JSON 文本），编辑器作为**首�
 
 | 项 | 结论 |
 |---|---|
-| 存量 80 景点 `trigger` | 不加新字段原样可用，**零迁移** |
-| 新字段（directionCheck 等） | 可选；`parseTrigger` 校验逻辑需同步扩展，老数据缺字段不报错 |
-| SQLite | `trigger` 列存 `JSON.stringify`，新字段天然兼容（`services/database.ts:70`） |
-| `seedSpots.ts` | 由 `server/spots_to_seed.py` 重新导出时自动带上新字段，无需手改 |
-| 后端 DB | `trigger` JSONField 透传，新增字段无需 migration；`GraphNode/GraphEdge` 新增表走一次 `makemigrations/migrate` |
+| 存量 81 景点 `trigger` | circle/corridor/polygon 三值，**零迁移** |
+| SQLite | `trigger` 列存 `JSON.stringify`（`services/database.ts`），解析时结构校验 |
+| `seedSpots.ts` | 由 `server/spots_to_seed.py` 从 DB 再生成，**禁止人工维护**（见下方数据源原则） |
+| 后端 DB | `trigger` JSONField 透传；编辑器写 API 走 `SpotWriteView`（`X-Editor-Key` 鉴权 + 结构/坐标校验） |
+
+**数据源原则（2026-08-08 决议）**：**Django DB 是唯一真源**。数据流单向：`Django DB → spots_to_seed.py → SQLite seed`。所有景点增改经 Django Admin 或编辑器写 API 落在 DB，再重新生成 seed；**禁止直接手改 `seedSpots.ts`**。App 本地 SQLite 仅是 DB 数据的派生缓存（seed 兜底 + 同步覆盖）。
 
 ---
 
