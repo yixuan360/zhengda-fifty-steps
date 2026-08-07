@@ -21,7 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTourStore } from '../../stores/tourStore';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { useTour } from '../../hooks/useTour';
+import type { Spot } from '../../types';
 import { initAMap } from '../../services/amap';
+import { updateSpot, createSpot } from '../../services/api';
+import { syncAll } from '../../services/sync';
 import { getTriggerSignedDistance } from '../../utils/trigger';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
@@ -68,6 +71,8 @@ function triggerShapeLabel(s: { trigger?: { type?: string } }): string {
  * 不能用 __DEV__ —— EAS preview/production 均为 release 构建，__DEV__ 恒为 false。
  */
 const DEBUG_UI = process.env.EXPO_PUBLIC_ENABLE_DEBUG === 'true';
+/** 触发区域编辑器（构建期门控，EXPO_PUBLIC_ENABLE_EDITOR=true 时显示） */
+const EDITOR_UI = process.env.EXPO_PUBLIC_ENABLE_EDITOR === 'true';
 
 function DebugLine({ label, value }: { label: string; value: string }) {
   return (
@@ -133,6 +138,102 @@ export default function MapScreen() {
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── 触发区域编辑器（仅 EDITOR_UI 构建） ──
+  const [editorOn, setEditorOn] = useState(false);
+  const [editorTool, setEditorTool] = useState<'point' | 'line' | 'polygon' | null>(null);
+  const [editorDraft, setEditorDraft] = useState<{ lat: number; lng: number }[]>([]);
+  const [editorSpotId, setEditorSpotId] = useState<number | null>(null); // null = 新建
+  const [editorRadius, setEditorRadius] = useState('50');
+  const [editorHalfWidth, setEditorHalfWidth] = useState('8');
+  const [editorName, setEditorName] = useState('');
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorMsg, setEditorMsg] = useState<string | null>(null);
+
+  /** 地图点击 → 收集绘制顶点（编辑器激活时） */
+  const handleMapPress = useCallback((e: { nativeEvent: { latitude: number; longitude: number } }) => {
+    if (!editorOn || !editorTool) return;
+    const p = { lat: e.nativeEvent.latitude, lng: e.nativeEvent.longitude };
+    setEditorDraft((prev) => (editorTool === 'point' ? [p] : [...prev, p]));
+  }, [editorOn, editorTool]);
+
+  /** 选择已有景点 → 载入其当前几何开始编辑 */
+  const pickSpotForEdit = useCallback((spot: Spot) => {
+    setEditorSpotId(spot.id);
+    setEditorName(spot.name);
+    setEditorMsg(null);
+    const t = spot.trigger;
+    if (t?.type === 'corridor' && (t.points?.length ?? 0) >= 2) {
+      setEditorTool('line');
+      setEditorDraft(t.points!);
+      setEditorHalfWidth(String(t.halfWidth ?? 8));
+    } else if (t?.type === 'polygon' && (t.points?.length ?? 0) >= 3) {
+      setEditorTool('polygon');
+      setEditorDraft(t.points!);
+    } else {
+      setEditorTool('point');
+      setEditorDraft([{ lat: spot.lat, lng: spot.lng }]);
+      setEditorRadius(String(spot.triggerRadius));
+    }
+  }, []);
+
+  /** 新建景点 */
+  const startNewSpot = useCallback(() => {
+    setEditorSpotId(null);
+    setEditorName('');
+    setEditorMsg(null);
+    setEditorTool('point');
+    setEditorDraft([]);
+    setEditorRadius('50');
+    setEditorHalfWidth('8');
+  }, []);
+
+  const clearDraft = useCallback(() => {
+    setEditorDraft([]);
+    setEditorMsg(null);
+  }, []);
+
+  /** 组装 trigger 并保存（编辑已有 → PATCH；新建 → POST） */
+  const saveDraft = useCallback(async () => {
+    let payload: Record<string, unknown>;
+    if (editorTool === 'point') {
+      if (editorDraft.length !== 1) { setEditorMsg('点工具：先在地图上点一下确定圆心'); return; }
+      const radius = parseFloat(editorRadius);
+      if (!isNaN(radius) && radius > 0) {
+        payload = { lat: editorDraft[0].lat, lng: editorDraft[0].lng, triggerRadius: Math.round(radius), trigger: null };
+      } else { setEditorMsg('半径需为大于 0 的数字'); return; }
+    } else if (editorTool === 'line') {
+      if (editorDraft.length < 2) { setEditorMsg('线工具：至少在地图上点 2 个点'); return; }
+      const hw = parseFloat(editorHalfWidth);
+      if (!isNaN(hw) && hw > 0) {
+        payload = { trigger: { type: 'corridor', points: editorDraft, halfWidth: hw } };
+      } else { setEditorMsg('半宽需为大于 0 的数字'); return; }
+    } else if (editorTool === 'polygon') {
+      if (editorDraft.length < 3) { setEditorMsg('面工具：至少在地图上点 3 个点'); return; }
+      payload = { trigger: { type: 'polygon', points: editorDraft } };
+    } else {
+      return;
+    }
+
+    setEditorSaving(true);
+    setEditorMsg(null);
+    try {
+      if (editorSpotId == null) {
+        const name = editorName.trim();
+        if (!name) { setEditorMsg('新建景点需填写名称'); setEditorSaving(false); return; }
+        const anchor = editorDraft[0] ?? { lat: 34.816, lng: 113.534 };
+        await createSpot({ name, lat: anchor.lat, lng: anchor.lng, triggerRadius: 50, ...payload });
+      } else {
+        await updateSpot(editorSpotId, payload);
+      }
+      setEditorMsg('✅ 已保存，正在刷新...');
+      syncAll().catch(() => {}); // 刷新景点列表
+    } catch {
+      setEditorMsg('❌ 保存失败：检查编辑器密钥与网络');
+    } finally {
+      setEditorSaving(false);
+    }
+  }, [editorTool, editorDraft, editorRadius, editorHalfWidth, editorName, editorSpotId]);
+
   const handleDebugTap = useCallback(() => {
     tapCount.current += 1;
     if (tapTimer.current) clearTimeout(tapTimer.current);
@@ -193,6 +294,7 @@ export default function MapScreen() {
           rotateGesturesEnabled={false}
           tiltGesturesEnabled={false}
           zoomControlsEnabled={false}
+          onPress={handleMapPress}
         >
           {/* 触发围栏可视化（可开关）：circle→圆，corridor→中心线，polygon→多边形 */}
           {showFences && activeSpots.map((s) => {
@@ -255,6 +357,35 @@ export default function MapScreen() {
               </View>
             </Marker>
           )}
+
+          {/* 编辑器草稿预览（赭石色，与触发围栏区分） */}
+          {editorOn && editorDraft.length > 0 && editorTool === 'point' && (
+            <Circle
+              center={{ latitude: editorDraft[0].lat, longitude: editorDraft[0].lng }}
+              radius={parseFloat(editorRadius) || 0}
+              fillColor="rgba(198,123,75,0.25)"
+              strokeColor="rgba(198,123,75,0.7)"
+              strokeWidth={1.5}
+              zIndex={20}
+            />
+          )}
+          {editorOn && editorTool === 'line' && editorDraft.length >= 2 && (
+            <Polyline
+              points={editorDraft.map(toAmapLatLng)}
+              width={4}
+              color="rgba(198,123,75,0.85)"
+              zIndex={20}
+            />
+          )}
+          {editorOn && editorTool === 'polygon' && editorDraft.length >= 3 && (
+            <Polygon
+              points={[...editorDraft.map(toAmapLatLng), toAmapLatLng(editorDraft[0])]}
+              fillColor="rgba(198,123,75,0.25)"
+              strokeColor="rgba(198,123,75,0.7)"
+              strokeWidth={1.5}
+              zIndex={20}
+            />
+          )}
         </MapView>
       )}
 
@@ -313,6 +444,19 @@ export default function MapScreen() {
         <Ionicons name={showFences ? 'radio-button-on' : 'radio-button-off'} size={20} color={showFences ? Color.primary : Color.caption} />
       </TouchableOpacity>
 
+      {/* ── 编辑器入口（仅 EDITOR_UI 构建） ── */}
+      {EDITOR_UI && (
+        <TouchableOpacity
+          style={[styles.editorEntry, { top: insets.top + 108, right: Spacing.pageH }]}
+          onPress={() => { setEditorOn((v) => !v); setEditorMsg(null); }}
+          activeOpacity={0.8}
+          hitSlop={8}
+        >
+          <Ionicons name={editorOn ? 'close' : 'create'} size={18} color={editorOn ? Color.error : Color.primary} />
+          <Text style={styles.editorEntryText}>{editorOn ? '退出' : '编辑'}</Text>
+        </TouchableOpacity>
+      )}
+
       {/* ── 回中按钮（右下） ── */}
       {userLocation && (
         <TouchableOpacity
@@ -323,6 +467,105 @@ export default function MapScreen() {
         >
           <Ionicons name="locate" size={20} color={Color.primary} />
         </TouchableOpacity>
+      )}
+
+      {/* ── 触发区域编辑器面板（仅 EDITOR_UI 构建） ── */}
+      {EDITOR_UI && editorOn && (
+        <View style={[styles.editorPanel, { top: insets.top + 60 }]}>
+          <View style={styles.editorHeaderRow}>
+            <Text style={styles.editorTitle}>✏️ 触发区域编辑器</Text>
+            {editorMsg && <Text style={styles.editorMsg} numberOfLines={1}>{editorMsg}</Text>}
+          </View>
+
+          {/* 目标：新建 / 已有景点 */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.editorChips}>
+            <TouchableOpacity
+              style={[styles.editorChip, editorSpotId == null && styles.editorChipActive]}
+              onPress={startNewSpot}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.editorChipText, editorSpotId == null && styles.editorChipTextActive]}>＋ 新建</Text>
+            </TouchableOpacity>
+            {activeSpots.map((s) => (
+              <TouchableOpacity
+                key={s.id}
+                style={[styles.editorChip, editorSpotId === s.id && styles.editorChipActive]}
+                onPress={() => pickSpotForEdit(s)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.editorChipText, editorSpotId === s.id && styles.editorChipTextActive]}>{s.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* 工具：点 / 线 / 面 + 清空 */}
+          <View style={styles.editorToolRow}>
+            {(['point', 'line', 'polygon'] as const).map((tool) => (
+              <TouchableOpacity
+                key={tool}
+                style={[styles.editorToolBtn, editorTool === tool && styles.editorToolActive]}
+                onPress={() => { setEditorTool(tool); setEditorDraft([]); setEditorMsg(null); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.editorToolText, editorTool === tool && styles.editorToolTextActive]}>
+                  {tool === 'point' ? '点' : tool === 'line' ? '线' : '面'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.editorClearBtn} onPress={clearDraft} activeOpacity={0.7}>
+              <Text style={styles.editorClearText}>清空</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 参数 + 保存 */}
+          <View style={styles.editorCtrlRow}>
+            {editorSpotId == null && (
+              <TextInput
+                style={styles.editorInput}
+                placeholder="新景点名称"
+                placeholderTextColor={Color.caption}
+                value={editorName}
+                onChangeText={setEditorName}
+              />
+            )}
+            {editorTool === 'point' && (
+              <TextInput
+                style={styles.editorInput}
+                placeholder="半径(m)"
+                placeholderTextColor={Color.caption}
+                value={editorRadius}
+                onChangeText={setEditorRadius}
+                keyboardType="decimal-pad"
+              />
+            )}
+            {editorTool === 'line' && (
+              <TextInput
+                style={styles.editorInput}
+                placeholder="半宽(m)"
+                placeholderTextColor={Color.caption}
+                value={editorHalfWidth}
+                onChangeText={setEditorHalfWidth}
+                keyboardType="decimal-pad"
+              />
+            )}
+            <TouchableOpacity
+              style={[styles.editorSaveBtn, editorSaving && { opacity: 0.6 }]}
+              onPress={saveDraft}
+              disabled={editorSaving}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.editorSaveText}>{editorSaving ? '保存中...' : '保存'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.editorHint}>
+            {editorTool === 'point'
+              ? '点一下地图确定圆心（点工具单点即圆心）'
+              : editorTool === 'line'
+                ? '连续点地图画折线，≥2 点'
+                : '连续点地图画面，≥3 点（自动闭合）'}
+          </Text>
+        </View>
       )}
 
       {/* ── 调试 UI：模拟定位调试 + 调试面板（仅 DEBUG_UI 构建） ── */}
@@ -592,4 +835,82 @@ const styles = StyleSheet.create({
   fallback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   fallbackTitle: { fontSize: 17, fontWeight: '600', marginBottom: 8 },
   fallbackText: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
+
+  // ── 触发区域编辑器 ──
+  editorEntry: {
+    position: 'absolute',
+    zIndex: 9998,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Color.cardBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Color.cardBorder,
+    ...Shadow.card,
+  },
+  editorEntryText: { fontSize: 9, fontWeight: '600', color: Color.primary },
+  editorPanel: {
+    position: 'absolute',
+    left: Spacing.pageH,
+    right: Spacing.pageH,
+    borderRadius: Radius.lg,
+    backgroundColor: Color.cardBg,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Color.primary,
+    zIndex: 10001,
+    ...Shadow.elevated,
+  },
+  editorHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  editorTitle: { fontSize: 15, fontWeight: '700', color: Color.primary },
+  editorMsg: { flex: 1, fontSize: 11, color: Color.caption, textAlign: 'right' },
+  editorChips: { flexDirection: 'row', gap: 6, paddingVertical: 2 },
+  editorChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    backgroundColor: Color.primarySoft,
+  },
+  editorChipActive: { backgroundColor: Color.primary },
+  editorChipText: { fontSize: 12, fontWeight: '500', color: Color.primary },
+  editorChipTextActive: { color: '#fff' },
+  editorToolRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  editorToolBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.sm,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: Color.divider,
+  },
+  editorToolActive: { backgroundColor: Color.primary, borderColor: Color.primary },
+  editorToolText: { fontSize: 13, fontWeight: '600', color: Color.heading },
+  editorToolTextActive: { color: '#fff' },
+  editorClearBtn: { marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 6 },
+  editorClearText: { fontSize: 12, color: Color.error },
+  editorCtrlRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  editorInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Color.divider,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: Color.heading,
+    backgroundColor: '#fff',
+  },
+  editorSaveBtn: {
+    height: 38,
+    paddingHorizontal: 18,
+    borderRadius: Radius.sm,
+    backgroundColor: Color.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editorSaveText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  editorHint: { fontSize: 11, color: Color.caption },
 });

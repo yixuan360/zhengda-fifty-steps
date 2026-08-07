@@ -4,9 +4,12 @@
  */
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import type { ApiResponse, SpotListData, GlobalConfig, AuthData, VersionData, PingData, CategoryListData } from '../types';
+import type { ApiResponse, SpotListData, GlobalConfig, AuthData, VersionData, PingData, CategoryListData, Spot } from '../types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+
+/** 景点编辑器密钥（写 API 鉴权头 X-Editor-Key；与 server .env EDITOR_KEY 对齐） */
+const EDITOR_KEY = process.env.EXPO_PUBLIC_EDITOR_KEY ?? '';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -91,6 +94,22 @@ api.interceptors.response.use(
 /** 全量拉取景点 */
 export async function fetchSpots(): Promise<ApiResponse<SpotListData>> {
   const { data } = await api.get<ApiResponse<SpotListData>>('/api/v1/spots/');
+  return data;
+}
+
+/** 更新景点（编辑器写 API，X-Editor-Key 鉴权） */
+export async function updateSpot(id: number, payload: Record<string, unknown>): Promise<ApiResponse<Spot>> {
+  const { data } = await api.patch<ApiResponse<Spot>>(`/api/v1/spots/write/${id}/`, payload, {
+    headers: { 'X-Editor-Key': EDITOR_KEY },
+  });
+  return data;
+}
+
+/** 创建景点（编辑器写 API，X-Editor-Key 鉴权） */
+export async function createSpot(payload: Record<string, unknown>): Promise<ApiResponse<Spot>> {
+  const { data } = await api.post<ApiResponse<Spot>>('/api/v1/spots/write/', payload, {
+    headers: { 'X-Editor-Key': EDITOR_KEY },
+  });
   return data;
 }
 

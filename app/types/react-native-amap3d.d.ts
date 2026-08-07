@@ -40,6 +40,8 @@ declare module 'react-native-amap3d' {
     tiltGesturesEnabled?: boolean;
     trafficEnabled?: boolean;
     onLoad?: () => void;
+    /** 地图点击（编辑器绘制用；原生层 emit "onPress"，载荷为 GCJ-02 经纬度） */
+    onPress?: (event: { nativeEvent: { latitude: number; longitude: number } }) => void;
     children?: React.ReactNode;
   }
 
