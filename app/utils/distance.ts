@@ -30,3 +30,23 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
 
   return EARTH_RADIUS_M * c;
 }
+
+/**
+ * 两点初始方位角（度，0=北，顺时针，范围 [0,360)）
+ * 用于 mapMatcher 计算折线走向与移动方向
+ */
+export function bearing(a: LatLng, b: LatLng): number {
+  const φ1 = toRad(a.lat);
+  const φ2 = toRad(b.lat);
+  const Δλ = toRad(b.lng - a.lng);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const deg = (Math.atan2(y, x) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}
+
+/** 两个方位角的夹角（度），归一到 [0,180] */
+export function angleDiff(aDeg: number, bDeg: number): number {
+  const d = Math.abs(aDeg - bDeg) % 360;
+  return d > 180 ? 360 - d : d;
+}

@@ -167,6 +167,17 @@ try {
   Date.now = realNow;
 }
 
+// ── 9. 方位角工具 ─────────────────────────────────────
+console.log('\n[7] bearing / angleDiff');
+const { bearing, angleDiff } = require(path.join(OUT, 'utils', 'distance.js'));
+ok('bearing 正北=0', approx(bearing({ lat: 0, lng: 0 }, { lat: 0.01, lng: 0 }), 0, 0.1));
+ok('bearing 正东=90', approx(bearing({ lat: 0, lng: 0 }, { lat: 0, lng: 0.01 }), 90, 0.1));
+ok('bearing 正南=180', approx(bearing({ lat: 0, lng: 0 }, { lat: -0.01, lng: 0 }), 180, 0.1));
+ok('bearing 正西=270', approx(bearing({ lat: 0, lng: 0 }, { lat: 0, lng: -0.01 }), 270, 0.1));
+ok('angleDiff(30,60)=30', approx(angleDiff(30, 60), 30, 0.001));
+ok('angleDiff(350,10)=20', approx(angleDiff(350, 10), 20, 0.001));
+ok('angleDiff(0,180)=180', approx(angleDiff(0, 180), 180, 0.001));
+
 // ── 收尾 ─────────────────────────────────────────────────
 fs.rmSync(OUT, { recursive: true, force: true });
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
