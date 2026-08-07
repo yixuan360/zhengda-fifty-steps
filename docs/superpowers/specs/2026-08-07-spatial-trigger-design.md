@@ -419,3 +419,4 @@ Django Admin 保留为**兜底编辑**（JSON 文本），编辑器作为**首�
 | 3 | 首个路线故事 | **南门 → 钟楼 → 图书馆**（含 Point + Corridor + Route，验证完整链路）；桥由 Step 2 单独验证，不并入 |
 | 4 | 商业街是否加方向感知 | **暂缓**。商业街是 Area/Zone 语义，非 Path；只改桥，最小化回归面 |
 | 5 | unknown 语义 | **不直接可播**（confidence 0，pending）。方向未分辨时不播、等轨迹分辨为 aligned(0.9) 后播；停留者恒 unknown 永不播，避免 60s 冷却循环。保持"方向是权重不是硬门槛"（冲突/未知均非一票否决，由阈值决定） |
+| 6 | 简化决定（2026-08-08） | **当前所有景点 = 触发区域内即播**，不使用 directionCheck。碧玉桥用纯 corridor（halfWidth=8 容忍带），"桥旁不误触"仅靠宽度一道闸。directionCheck/mapMatcher/pending 能力保留（已实现+测试），待 Phase 2 路线故事或有明确需求再启用；GlobalConfig 参数动态化同步推迟 |
