@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
-index cc717fd..145f27f 100644
+index cc717fd..0ffafaf 100644
 --- a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
 +++ b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
 @@ -6,6 +6,9 @@ import com.amap.api.maps.AMap
@@ -12,18 +12,21 @@ index cc717fd..145f27f 100644
  import com.amap.api.maps.model.Marker
  import com.amap.api.maps.model.MyLocationStyle
  import com.facebook.react.bridge.Arguments
-@@ -26,6 +29,7 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
+@@ -26,6 +29,9 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
    private val markerMap = HashMap<String, qiuxiang.amap3d.map_view.Marker>()
    private val polylineMap = HashMap<String, Polyline>()
    private var initialCameraPosition: ReadableMap? = null
 +  private var initialLatLngBounds: LatLngBounds? = null
++  private var initialBoundsApplied = false
++  private var mapLoaded = false
    private var locationStyle: MyLocationStyle
  
    init {
-@@ -35,6 +39,22 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
+@@ -35,7 +41,27 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
      locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
      map.myLocationStyle = locationStyle
  
+-    map.setOnMapLoadedListener { emit(id, "onLoad") }
 +    // 自定义地图样式：读取 assets 下的 style.data / style_extra.data（高德自定义样式，去 POI 标注）。
 +    // 若缺失或加载失败则降级为默认底图，不影响地图可用性。
 +    try {
@@ -40,10 +43,15 @@ index cc717fd..145f27f 100644
 +      // 样式加载失败：保持默认底图
 +    }
 +
-     map.setOnMapLoadedListener { emit(id, "onLoad") }
++    map.setOnMapLoadedListener {
++      mapLoaded = true
++      applyInitialLatLngBounds()
++      emit(id, "onLoad")
++    }
      map.setOnMapClickListener { latLng -> emit(id, "onPress", latLng.toJson()) }
      map.setOnPOIClickListener { poi -> emit(id, "onPressPoi", poi.toJson()) }
-@@ -151,6 +171,21 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
+     map.setOnMapLongClickListener { latLng -> emit(id, "onLongPress", latLng.toJson()) }
+@@ -151,6 +177,29 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
      }
    }
  
@@ -57,8 +65,16 @@ index cc717fd..145f27f 100644
 +          .include(southwest)
 +          .include(northeast)
 +          .build()
-+        map.moveCamera(CameraUpdateFactory.newLatLngBounds(initialLatLngBounds!!, 60))
++        applyInitialLatLngBounds()
 +      }
++    }
++  }
++
++  /** 延迟到地图加载完成后 fitBounds，否则像素尺寸为 0 时调用会被忽略 */
++  private fun applyInitialLatLngBounds() {
++    if (mapLoaded && !initialBoundsApplied && initialLatLngBounds != null) {
++      initialBoundsApplied = true
++      map.moveCamera(CameraUpdateFactory.newLatLngBounds(initialLatLngBounds!!, 60))
 +    }
 +  }
 +
