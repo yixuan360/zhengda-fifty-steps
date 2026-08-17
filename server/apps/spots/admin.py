@@ -4,6 +4,7 @@
 - list_display 含图片/音频链接
 - MIME 白名单校验
 - mark_audio_ready 批量 action
+- trigger 字段使用高德地图可视化编辑器（TriggerMapWidget）
 """
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
@@ -11,6 +12,8 @@ from django.db.models import Q
 from django.utils.html import format_html
 from django import forms
 from .models import Spot
+from .widgets import TriggerMapWidget
+from .trigger_validation import validate_trigger
 from apps.config.models import Category
 
 # ── MIME 白名单 ──────────────────────────────────────────
@@ -31,8 +34,29 @@ def _validate_file_mime(file, allowed_mimes, label):
         )
 
 
+class SpotAdminForm(forms.ModelForm):
+    """Spot 后台表单：trigger 换成地图编辑器，提交时做结构校验兜底。"""
+
+    class Meta:
+        model = Spot
+        fields = '__all__'
+        widgets = {'trigger': TriggerMapWidget}
+
+    def clean_trigger(self):
+        # 规则与写 API（views.validate_trigger）一致，共用同一函数避免漂移
+        value = self.cleaned_data.get('trigger')
+        if not validate_trigger(value):
+            raise forms.ValidationError(
+                '触发区域结构无效：type 仅支持 circle/corridor/polygon；'
+                '走廊至少 2 个顶点、多边形至少 3 个顶点，'
+                '顶点须为 {"lat","lng"} 且为有限数，halfWidth 须为正数。'
+            )
+        return value
+
+
 @admin.register(Spot)
 class SpotAdmin(admin.ModelAdmin):
+    form = SpotAdminForm
     list_display = [
         'id', 'image_thumb', 'name', 'category', 'lat', 'lng',
         'trigger_radius', 'audio_link', 'is_active', 'updated_at',
@@ -62,9 +86,8 @@ class SpotAdmin(admin.ModelAdmin):
         }),
         ('触发区域（v4.1 几何）', {
             'fields': ('trigger',),
-            'description': '留空 = 圆形（用上方 trigger_radius）。'
-                           'JSON 格式：{"type":"corridor","halfWidth":15,"points":[[lat,lng],...]}'
-                           ' 或 {"type":"polygon","points":[[lat,lng],...]}。points 为 GCJ-02。',
+            'description': '在下方地图上直接绘制触发区域；留空 = 圆形（用上方 trigger_radius）。'
+                           '走廊/多边形顶点为 GCJ-02 坐标。',
         }),
         ('内容', {
             'fields': ('summary', 'description'),

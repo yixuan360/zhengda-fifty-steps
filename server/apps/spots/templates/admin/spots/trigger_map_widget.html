@@ -1,0 +1,355 @@
+{# Admin 触发区域地图编辑器（高德 JS API 2.0）。textarea 保留为 JSON 同步目标。 #}
+<div class="trigger-map-editor">
+  {# 原始 textarea：缩小置灰但照常提交，高级用户可直接改 JSON #}
+  <div class="trigger-map-raw">
+    {% include "django/forms/widgets/textarea.html" %}
+  </div>
+
+  {% if not amap_web_key %}
+  <div class="trigger-map-banner trigger-map-banner-error">
+    未配置 AMAP_WEB_KEY，请在 server/.env 配置 AMAP_WEB_KEY / AMAP_WEB_SECURITY_CODE 后重启服务；
+    当前仅可手改上方 JSON。
+  </div>
+  {% else %}
+  <div class="trigger-map-banner trigger-map-banner-error" id="tm-load-error" style="display:none;">
+    高德地图脚本加载失败（key/安全密钥/域名白名单问题或网络异常），请检查配置；当前仅可手改上方 JSON。
+  </div>
+  <div class="trigger-map-banner" id="tm-hint" style="display:none;"></div>
+
+  <div class="trigger-map-toolbar">
+    <span class="tm-group">
+      形状：
+      <button type="button" class="tm-btn" data-shape="circle">圆形</button>
+      <button type="button" class="tm-btn" data-shape="corridor">走廊</button>
+      <button type="button" class="tm-btn" data-shape="polygon">多边形</button>
+    </span>
+    <span class="tm-group">
+      <button type="button" class="tm-btn" id="tm-undo">撤销上一点</button>
+      <button type="button" class="tm-btn" id="tm-clear">清除重画</button>
+    </span>
+    <span class="tm-group" id="tm-radius-group">
+      半径 <input type="range" id="tm-radius" min="10" max="500" step="5" value="50">
+      <span id="tm-radius-val">50 m</span>
+    </span>
+    <span class="tm-group" id="tm-halfwidth-group" style="display:none;">
+      半宽 <input type="range" id="tm-halfwidth" min="3" max="100" step="1" value="15">
+      <span id="tm-halfwidth-val">15 m</span>
+    </span>
+    <span class="tm-group tm-status" id="tm-status"></span>
+  </div>
+
+  <div class="trigger-map-canvas" id="tm-map"></div>
+  {% endif %}
+</div>
+
+<style>
+.trigger-map-editor { margin: 4px 0 12px; max-width: 900px; }
+.trigger-map-raw textarea {
+  width: 100%; max-width: 900px; height: 3.2em; font-size: 11px;
+  color: #888; background: #f5f5f5; resize: vertical;
+}
+.trigger-map-banner {
+  padding: 8px 12px; margin: 6px 0; border-radius: 4px; font-size: 13px;
+  background: #eef5ff; border: 1px solid #b8d4f5; color: #205a9e;
+}
+.trigger-map-banner-error {
+  background: #fff3f0; border-color: #f5b8a8; color: #b23c17; font-weight: bold;
+}
+.trigger-map-toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+  padding: 6px 0; font-size: 13px;
+}
+.trigger-map-toolbar .tm-group { display: inline-flex; align-items: center; gap: 6px; }
+.tm-btn {
+  padding: 3px 12px; border: 1px solid #999; border-radius: 4px;
+  background: #fff; cursor: pointer; font-size: 13px;
+}
+.tm-btn.tm-active { background: #205a9e; border-color: #205a9e; color: #fff; }
+.tm-status { color: #666; }
+.trigger-map-canvas { width: 100%; height: 480px; border: 1px solid #ccc; border-radius: 4px; }
+</style>
+
+{% if amap_web_key %}
+<script>
+// 安全密钥必须在高德 loader 脚本之前设置
+window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }}" };
+</script>
+<script
+  src="https://webapi.amap.com/maps?v=2.0&key={{ amap_web_key|urlencode }}"
+  onload="window.__tmAmapReady && window.__tmAmapReady()"
+  onerror="window.__tmAmapFail && window.__tmAmapFail()"></script>
+<script>
+(function () {
+  'use strict';
+
+  var TEXTAREA_ID = "{{ widget.attrs.id|default:'id_trigger'|escapejs }}";
+  // 郑大主校区范围（GCJ-02，高德原生坐标系）
+  var CAMPUS_SW = [113.52951, 34.808282];
+  var CAMPUS_NE = [113.54206, 34.827075];
+  var MIN_POINTS = { corridor: 2, polygon: 3 };
+
+  function $(id) { return document.getElementById(id); }
+
+  function onReady(fn) {
+    if (document.readyState !== 'loading') { fn(); }
+    else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+
+  onReady(function () {
+    var loadError = $('tm-load-error');
+    if (!loadError) { return; }  // 无 key 分支不渲染编辑器
+
+    window.__tmAmapFail = function () { loadError.style.display = ''; };
+    window.__tmAmapReady = function () {
+      if (window.AMap) { initEditor(); }
+      else { loadError.style.display = ''; }
+    };
+    // 兜底：高德脚本被浏览器拦截时 onload/onerror 都可能不触发
+    setTimeout(function () {
+      if (!window.AMap && !window.__tmInited) { loadError.style.display = ''; }
+    }, 8000);
+  });
+
+  function initEditor() {
+    window.__tmInited = true;
+    var textarea = $(TEXTAREA_ID);
+    var latInput = $('id_lat');
+    var lngInput = $('id_lng');
+    var radiusInput = $('id_trigger_radius');
+    var hint = $('tm-hint');
+    var status = $('tm-status');
+
+    // ── 状态 ────────────────────────────────
+    var shapeType = 'circle';           // circle | corridor | polygon
+    var points = [];                    // [[lat, lng], ...]（GCJ-02）
+    var halfWidth = 15;
+    var map, marker, overlay = null, shapeEditor = null;
+
+    function showHint(msg) {
+      hint.textContent = msg;
+      hint.style.display = msg ? '' : 'none';
+    }
+
+    function fmt(n) { return Number(n).toFixed(6); }
+
+    function spotLngLat() {
+      return [parseFloat(lngInput.value) || 113.535, parseFloat(latInput.value) || 34.817];
+    }
+
+    // ── 序列化回 textarea ─────────────────────
+    // circle 写 ''（后端走 trigger_radius 默认逻辑）；
+    // corridor/polygon 写 {"type":..., "points":[{"lat","lng"}...]}（对齐服务端 validate_trigger）
+    function syncTextarea() {
+      if (shapeType === 'circle') {
+        textarea.value = '';
+      } else if (points.length >= MIN_POINTS[shapeType]) {
+        var obj = {
+          type: shapeType,
+          points: points.map(function (p) {
+            return { lat: parseFloat(fmt(p[0])), lng: parseFloat(fmt(p[1])) };
+          }),
+        };
+        if (shapeType === 'corridor') { obj.halfWidth = halfWidth; }
+        textarea.value = JSON.stringify(obj);
+      }
+      // 点数不足时不写回，等 Django 表单校验兜底提示
+      updateStatus();
+    }
+
+    function updateStatus() {
+      if (shapeType === 'circle') {
+        status.textContent = '拖拽景点标记或圆边缘调整触发范围';
+      } else {
+        var need = MIN_POINTS[shapeType];
+        status.textContent = points.length < need
+          ? '点击地图添加顶点（还需 ' + (need - points.length) + ' 个）'
+          : '已 ' + points.length + ' 个顶点，可拖拽顶点手柄微调';
+      }
+    }
+
+    // ── 形状清理 ─────────────────────────────
+    function clearOverlay() {
+      if (shapeEditor) { shapeEditor.close(); shapeEditor = null; }
+      if (overlay) { map.remove(overlay); overlay = null; }
+    }
+
+    function currentRadius() {
+      return parseInt(radiusInput.value, 10) || 50;
+    }
+
+    // ── 圆形 ────────────────────────────────
+    function buildCircle() {
+      clearOverlay();
+      overlay = new AMap.Circle({
+        center: spotLngLat(),
+        radius: currentRadius(),
+        strokeColor: '#205a9e', strokeWeight: 2,
+        fillColor: '#205a9e', fillOpacity: 0.15,
+      });
+      map.add(overlay);
+      AMap.plugin('AMap.CircleEditor', function () {
+        shapeEditor = new AMap.CircleEditor(map, overlay);
+        // 拖动圆边缘 → 同步半径滑杆与 trigger_radius 输入框
+        shapeEditor.on('adjust', function (e) {
+          var r = Math.round(e.radius);
+          radiusInput.value = r;
+          $('tm-radius').value = Math.min(500, Math.max(10, r));
+          $('tm-radius-val').textContent = r + ' m';
+        });
+        shapeEditor.open();
+      });
+    }
+
+    // ── 走廊 / 多边形 ────────────────────────
+    function toLngLats() {
+      return points.map(function (p) { return [p[1], p[0]]; });
+    }
+
+    function readBackPath() {
+      // 官方编辑器拖拽顶点后，从 overlay 读回最新路径
+      if (!overlay) { return; }
+      var path = overlay.getPath();
+      points = path.map(function (ll) { return [ll.lat, ll.lng]; });
+      syncTextarea();
+    }
+
+    function buildPoly() {
+      clearOverlay();
+      var opts = {
+        path: toLngLats(),
+        strokeColor: '#205a9e', strokeWeight: 3,
+        fillColor: '#205a9e', fillOpacity: 0.15,
+      };
+      overlay = shapeType === 'corridor' ? new AMap.Polyline(opts) : new AMap.Polygon(opts);
+      map.add(overlay);
+      // 点数达标后开启官方顶点编辑（自带可拖拽手柄）
+      if (points.length >= MIN_POINTS[shapeType]) {
+        var plugin = shapeType === 'corridor' ? 'AMap.PolylineEditor' : 'AMap.PolygonEditor';
+        AMap.plugin(plugin, function () {
+          var Editor = shapeType === 'corridor' ? AMap.PolylineEditor : AMap.PolygonEditor;
+          shapeEditor = new Editor(map, overlay);
+          shapeEditor.on('addnode', readBackPath);
+          shapeEditor.on('adjust', readBackPath);
+          shapeEditor.on('removenode', readBackPath);
+          shapeEditor.open();
+        });
+      }
+      updateStatus();
+    }
+
+    function rebuild() {
+      if (shapeType === 'circle') { buildCircle(); } else { buildPoly(); }
+    }
+
+    // ── 形状切换 / 工具栏 ────────────────────
+    function setShape(t) {
+      shapeType = t;
+      document.querySelectorAll('.tm-btn[data-shape]').forEach(function (btn) {
+        btn.classList.toggle('tm-active', btn.getAttribute('data-shape') === t);
+      });
+      $('tm-radius-group').style.display = t === 'circle' ? '' : 'none';
+      $('tm-halfwidth-group').style.display = t === 'corridor' ? '' : 'none';
+      rebuild();
+      syncTextarea();
+    }
+
+    document.querySelectorAll('.tm-btn[data-shape]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setShape(btn.getAttribute('data-shape')); });
+    });
+
+    $('tm-undo').addEventListener('click', function () {
+      if (shapeType === 'circle' || !points.length) { return; }
+      points.pop();
+      rebuild();
+      syncTextarea();
+    });
+
+    $('tm-clear').addEventListener('click', function () {
+      points = [];
+      if (shapeType !== 'circle') { rebuild(); syncTextarea(); }
+    });
+
+    // 半径滑杆 → 圆 + trigger_radius 输入框
+    $('tm-radius').addEventListener('input', function () {
+      var r = parseInt(this.value, 10);
+      $('tm-radius-val').textContent = r + ' m';
+      radiusInput.value = r;
+      if (shapeType === 'circle' && overlay) { overlay.setRadius(r); }
+    });
+
+    // 半宽滑杆 → 走廊 halfWidth（视觉上只画中线，数值实时显示）
+    $('tm-halfwidth').addEventListener('input', function () {
+      halfWidth = parseInt(this.value, 10);
+      $('tm-halfwidth-val').textContent = halfWidth + ' m';
+      if (shapeType === 'corridor') { syncTextarea(); }
+    });
+
+    // ── 解析已有数据 ─────────────────────────
+    function loadExisting() {
+      var raw = (textarea.value || '').trim();
+      var initType = 'circle';
+      if (raw) {
+        try {
+          var t = JSON.parse(raw);
+          if (t && (t.type === 'corridor' || t.type === 'polygon') && Array.isArray(t.points)) {
+            // 兼容 {"lat","lng"} 对象与 [lat,lng] 数组两种 points 元素
+            points = t.points.map(function (p) {
+              return Array.isArray(p) ? [Number(p[0]), Number(p[1])] : [Number(p.lat), Number(p.lng)];
+            }).filter(function (p) {
+              return isFinite(p[0]) && isFinite(p[1]);
+            });
+            if (t.type === 'corridor' && t.halfWidth > 0) {
+              halfWidth = Math.round(t.halfWidth);
+              $('tm-halfwidth').value = halfWidth;
+              $('tm-halfwidth-val').textContent = halfWidth + ' m';
+            }
+            if (points.length >= MIN_POINTS[t.type]) { initType = t.type; }
+            else { points = []; showHint('已有 trigger 顶点数不足，已按圆形初始化。'); }
+          }
+        } catch (e) {
+          showHint('已有 trigger JSON 无法解析，已按圆形初始化；请改用下方地图绘制或修正 JSON。');
+        }
+      }
+      var r = currentRadius();
+      $('tm-radius').value = Math.min(500, Math.max(10, r));
+      $('tm-radius-val').textContent = r + ' m';
+      return initType;
+    }
+
+    // ── 地图初始化 ───────────────────────────
+    var hasSpotPos = !!(latInput.value && lngInput.value);
+    map = new AMap.Map('tm-map', {
+      viewMode: '2D',
+      zoom: 16,
+      center: hasSpotPos ? spotLngLat() : undefined,
+    });
+    if (!hasSpotPos) {
+      map.setBounds(new AMap.Bounds(CAMPUS_SW, CAMPUS_NE));
+    }
+
+    // 景点中心标记：可拖拽，拖动同步 id_lat / id_lng，圆形跟随
+    marker = new AMap.Marker({ position: spotLngLat(), draggable: true, title: '景点位置（可拖拽）' });
+    map.add(marker);
+    function onMarkerMove() {
+      var pos = marker.getPosition();
+      latInput.value = fmt(pos.lat);
+      lngInput.value = fmt(pos.lng);
+      if (shapeType === 'circle' && overlay) { overlay.setCenter([pos.lng, pos.lat]); }
+    }
+    marker.on('dragging', onMarkerMove);
+    marker.on('dragend', onMarkerMove);
+
+    // 点击地图为走廊/多边形添加顶点
+    map.on('click', function (e) {
+      if (shapeType === 'circle') { return; }
+      points.push([e.lnglat.lat, e.lnglat.lng]);
+      rebuild();
+      syncTextarea();
+    });
+
+    var initType = loadExisting();
+    setShape(initType);
+  }
+})();
+</script>
+{% endif %}

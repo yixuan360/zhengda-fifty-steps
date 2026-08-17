@@ -17,6 +17,10 @@ DEBUG = env_config('DEBUG', default=True, cast=bool)
 # 景点编辑器写 API 密钥（X-Editor-Key 头比对；课程项目简化鉴权，非完整 RBAC）
 EDITOR_KEY = env_config('EDITOR_KEY', default='')
 
+# 高德 Web 端 JS API（Admin 触发区域地图编辑器用）
+AMAP_WEB_KEY = env_config('AMAP_WEB_KEY', default='')
+AMAP_WEB_SECURITY_CODE = env_config('AMAP_WEB_SECURITY_CODE', default='')
+
 ALLOWED_HOSTS = env_config(
     'ALLOWED_HOSTS',
     default='localhost,127.0.0.1,10.0.2.2,testserver',
