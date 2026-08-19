@@ -74,11 +74,9 @@
 // 安全密钥必须在高德 loader 脚本之前设置
 window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }}" };
 </script>
-<script
-  src="https://webapi.amap.com/maps?v=2.0&key={{ amap_web_key|urlencode }}"
-  onload="window.__tmAmapReady && window.__tmAmapReady()"
-  onerror="window.__tmAmapFail && window.__tmAmapFail()"></script>
 <script>
+// 高德 loader 放在本 IIFE 之后（见文件尾部），回调必须在此之前同步挂到 window 上：
+// 外链脚本的 load 事件先于 DOMContentLoaded 触发，放 DOMContentLoaded 里会错过 onload。
 (function () {
   'use strict';
 
@@ -90,29 +88,12 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
 
   function $(id) { return document.getElementById(id); }
 
-  function onReady(fn) {
-    if (document.readyState !== 'loading') { fn(); }
-    else { document.addEventListener('DOMContentLoaded', fn); }
-  }
-
-  onReady(function () {
-    var loadError = $('tm-load-error');
-    if (!loadError) { return; }  // 无 key 分支不渲染编辑器
-
-    window.__tmAmapFail = function () { loadError.style.display = ''; };
-    window.__tmAmapReady = function () {
-      if (window.AMap) { initEditor(); }
-      else { loadError.style.display = ''; }
-    };
-    // 兜底：高德脚本被浏览器拦截时 onload/onerror 都可能不触发
-    setTimeout(function () {
-      if (!window.AMap && !window.__tmInited) { loadError.style.display = ''; }
-    }, 8000);
-  });
-
   function initEditor() {
-    window.__tmInited = true;
+    if (window.__tmInited) { return; }
+    var mapEl = $('tm-map');
     var textarea = $(TEXTAREA_ID);
+    if (!mapEl || !textarea) { return; }  // 编辑器 DOM 不在页面上（如只读视图）则不初始化
+    window.__tmInited = true;
     var latInput = $('id_lat');
     var lngInput = $('id_lng');
     var radiusInput = $('id_trigger_radius');
@@ -133,7 +114,10 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     function fmt(n) { return Number(n).toFixed(6); }
 
     function spotLngLat() {
-      return [parseFloat(lngInput.value) || 113.535, parseFloat(latInput.value) || 34.817];
+      // lat/lng 输入框理论上同在表单里；缺失或为空时回退到校园中心
+      var lat = latInput ? parseFloat(latInput.value) : NaN;
+      var lng = lngInput ? parseFloat(lngInput.value) : NaN;
+      return [lng || 113.535, lat || 34.817];
     }
 
     // ── 序列化回 textarea ─────────────────────
@@ -174,7 +158,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     }
 
     function currentRadius() {
-      return parseInt(radiusInput.value, 10) || 50;
+      return (radiusInput && parseInt(radiusInput.value, 10)) || 50;
     }
 
     // ── 圆形 ────────────────────────────────
@@ -192,7 +176,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
         // 拖动圆边缘 → 同步半径滑杆与 trigger_radius 输入框
         shapeEditor.on('adjust', function (e) {
           var r = Math.round(e.radius);
-          radiusInput.value = r;
+          if (radiusInput) { radiusInput.value = r; }
           $('tm-radius').value = Math.min(500, Math.max(10, r));
           $('tm-radius-val').textContent = r + ' m';
         });
@@ -273,7 +257,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     $('tm-radius').addEventListener('input', function () {
       var r = parseInt(this.value, 10);
       $('tm-radius-val').textContent = r + ' m';
-      radiusInput.value = r;
+      if (radiusInput) { radiusInput.value = r; }
       if (shapeType === 'circle' && overlay) { overlay.setRadius(r); }
     });
 
@@ -317,7 +301,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     }
 
     // ── 地图初始化 ───────────────────────────
-    var hasSpotPos = !!(latInput.value && lngInput.value);
+    var hasSpotPos = !!(latInput && latInput.value && lngInput && lngInput.value);
     map = new AMap.Map('tm-map', {
       viewMode: '2D',
       zoom: 16,
@@ -332,16 +316,17 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     map.add(marker);
     function onMarkerMove() {
       var pos = marker.getPosition();
-      latInput.value = fmt(pos.lat);
-      lngInput.value = fmt(pos.lng);
+      if (latInput) { latInput.value = fmt(pos.lat); }
+      if (lngInput) { lngInput.value = fmt(pos.lng); }
       if (shapeType === 'circle' && overlay) { overlay.setCenter([pos.lng, pos.lat]); }
     }
     marker.on('dragging', onMarkerMove);
     marker.on('dragend', onMarkerMove);
 
-    // 点击地图为走廊/多边形添加顶点
+    // 点击地图为走廊/多边形添加顶点；顶点数达标后交给官方编辑器手柄微调，忽略地图点击避免误加散点
     map.on('click', function (e) {
       if (shapeType === 'circle') { return; }
+      if (points.length >= MIN_POINTS[shapeType]) { return; }
       points.push([e.lnglat.lat, e.lnglat.lng]);
       rebuild();
       syncTextarea();
@@ -350,6 +335,27 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     var initType = loadExisting();
     setShape(initType);
   }
+
+  // ── 高德 loader 回调（同步定义，见下方 script 标签顺序说明）──
+  window.__tmAmapFail = function () {
+    var el = $('tm-load-error');
+    if (el) { el.style.display = ''; }
+  };
+  window.__tmAmapReady = function () {
+    if (window.__tmInited) { return; }
+    if (window.AMap) { initEditor(); }
+    else { window.__tmAmapFail(); }
+  };
+  // 兜底：高德脚本被浏览器拦截时 onload/onerror 都可能不触发
+  setTimeout(function () {
+    if (!window.__tmInited) { window.__tmAmapReady(); }
+  }, 8000);
 })();
 </script>
+{# 注意：loader 必须放在上面 IIFE 之后——外链脚本的 load 事件先于 DOMContentLoaded 触发， #}
+{# 回调若等 DOMContentLoaded 才挂 window 会错过 onload，导致地图永远不初始化。 #}
+<script
+  src="https://webapi.amap.com/maps?v=2.0&key={{ amap_web_key|urlencode }}"
+  onload="window.__tmAmapReady && window.__tmAmapReady()"
+  onerror="window.__tmAmapFail && window.__tmAmapFail()"></script>
 {% endif %}
