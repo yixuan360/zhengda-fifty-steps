@@ -69,8 +69,9 @@ class Command(BaseCommand):
         if spot_id:
             queryset = queryset.filter(id=spot_id)
         elif not force:
-            # 默认跳过已有音频的景点
-            queryset = queryset.filter(audio__isnull=True)
+            # 默认跳过已有音频的景点（audio 可能是空字符串或 NULL）
+            from django.db.models import Q
+            queryset = queryset.filter(Q(audio__isnull=True) | Q(audio=''))
 
         spots = list(queryset)
 
