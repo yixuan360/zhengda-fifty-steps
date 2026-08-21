@@ -33,7 +33,7 @@
     </span>
     <span class="tm-group" id="tm-halfwidth-group" style="display:none;">
       半宽 <input type="range" id="tm-halfwidth" min="3" max="100" step="1" value="15">
-      <span id="tm-halfwidth-val">15 m</span>
+      <input type="number" id="tm-halfwidth-num" min="3" max="100" step="1" value="15"> m
     </span>
     <span class="tm-group tm-status" id="tm-status"></span>
   </div>
@@ -60,6 +60,7 @@
   padding: 6px 0; font-size: 13px;
 }
 .trigger-map-toolbar .tm-group { display: inline-flex; align-items: center; gap: 6px; }
+.trigger-map-toolbar input[type="number"] { width: 64px; padding: 2px 4px; }
 .tm-btn {
   padding: 3px 12px; border: 1px solid #999; border-radius: 4px;
   background: #fff; cursor: pointer; font-size: 13px;
@@ -104,7 +105,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     var shapeType = 'circle';           // circle | corridor | polygon
     var points = [];                    // [[lat, lng], ...]（GCJ-02）
     var halfWidth = 15;
-    var map, marker, overlay = null, shapeEditor = null;
+    var map, marker, overlay = null, shapeEditor = null, bandOverlay = null;
 
     function showHint(msg) {
       hint.textContent = msg;
@@ -147,7 +148,8 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
         var need = MIN_POINTS[shapeType];
         status.textContent = points.length < need
           ? '点击地图添加顶点（还需 ' + (need - points.length) + ' 个）'
-          : '已 ' + points.length + ' 个顶点，可拖拽顶点手柄微调';
+          : '已 ' + points.length + ' 个顶点，可拖拽顶点手柄微调' +
+            (shapeType === 'corridor' ? '；虚线带 = 半宽实际覆盖范围' : '');
       }
     }
 
@@ -155,6 +157,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
     function clearOverlay() {
       if (shapeEditor) { shapeEditor.close(); shapeEditor = null; }
       if (overlay) { map.remove(overlay); overlay = null; }
+      if (bandOverlay) { map.remove(bandOverlay); bandOverlay = null; }
     }
 
     function currentRadius() {
@@ -194,11 +197,74 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
       if (!overlay) { return; }
       var path = overlay.getPath();
       points = path.map(function (ll) { return [ll.lat, ll.lng]; });
+      refreshBand();
       syncTextarea();
+    }
+
+    // ── 走廊半宽覆盖带（仅可视化，真实判定见 app/utils/trigger.ts）──
+    // 平面近似（校园尺度误差可忽略）：折线向两侧各外扩 halfWidth 米，
+    // 拐角斜切（限 2.5 倍防爆），两端补半圆盖，合成胶囊多边形。
+    function corridorBandPath(pts, hw) {
+      if (pts.length < 2 || !(hw > 0)) { return null; }
+      var mPerDegLng = 111320 * Math.cos(pts[0][0] * Math.PI / 180);
+      var mPerDegLat = 110574;
+      var xy = pts.map(function (p) { return [p[1] * mPerDegLng, p[0] * mPerDegLat]; });
+      var n = xy.length, i;
+      var normals = [];                    // 每段左法线（单位向量）
+      for (i = 0; i < n - 1; i++) {
+        var dx = xy[i + 1][0] - xy[i][0], dy = xy[i + 1][1] - xy[i][1];
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        normals.push([-dy / len, dx / len]);
+      }
+      var vnorm = [normals[0]];            // 顶点法线（拐角取相邻段法线均值 + 斜切补偿）
+      for (i = 1; i < n - 1; i++) {
+        var nx = normals[i - 1][0] + normals[i][0], ny = normals[i - 1][1] + normals[i][1];
+        var nl = Math.sqrt(nx * nx + ny * ny);
+        if (nl < 1e-6) { vnorm.push(normals[i]); continue; }
+        nx /= nl; ny /= nl;
+        var dot = nx * normals[i][0] + ny * normals[i][1];
+        var k = Math.min(1 / Math.max(dot, 0.4), 2.5);
+        vnorm.push([nx * k, ny * k]);
+      }
+      vnorm.push(normals[n - 2]);
+      function off(idx, sign) {
+        return [xy[idx][0] + vnorm[idx][0] * hw * sign, xy[idx][1] + vnorm[idx][1] * hw * sign];
+      }
+      // 端点半圆盖：从 fromSign 侧顺时针扫 180° 到另一侧（经过端点前进/后退方向）
+      function capPts(idx, fromSign, steps) {
+        var c = xy[idx], vn = vnorm[idx];
+        var a0 = Math.atan2(fromSign * vn[1], fromSign * vn[0]);
+        var out = [];
+        for (var s = 1; s < steps; s++) {
+          var a = a0 - Math.PI * s / steps;
+          out.push([c[0] + hw * Math.cos(a), c[1] + hw * Math.sin(a)]);
+        }
+        return out;
+      }
+      var ring = [];
+      for (i = 0; i < n; i++) { ring.push(off(i, 1)); }        // 左侧：起点→终点
+      ring = ring.concat(capPts(n - 1, 1, 8));                  // 终点半圆盖
+      for (i = n - 1; i >= 0; i--) { ring.push(off(i, -1)); }   // 右侧：终点→起点
+      ring = ring.concat(capPts(0, -1, 8));                     // 起点半圆盖
+      return ring.map(function (p) { return [p[0] / mPerDegLng, p[1] / mPerDegLat]; }); // AMap [lng,lat]
+    }
+
+    function refreshBand() {
+      if (bandOverlay) { map.remove(bandOverlay); bandOverlay = null; }
+      if (shapeType !== 'corridor' || points.length < 2) { return; }
+      var ring = corridorBandPath(points, halfWidth);
+      if (!ring) { return; }
+      bandOverlay = new AMap.Polygon({
+        path: ring,
+        strokeColor: '#205a9e', strokeWeight: 1, strokeOpacity: 0.6, strokeStyle: 'dashed',
+        fillColor: '#205a9e', fillOpacity: 0.08,
+      });
+      map.add(bandOverlay);
     }
 
     function buildPoly() {
       clearOverlay();
+      if (shapeType === 'corridor') { refreshBand(); }  // 覆盖带画在中线下层，不挡顶点手柄
       var opts = {
         path: toLngLats(),
         strokeColor: '#205a9e', strokeWeight: 3,
@@ -261,11 +327,23 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
       if (shapeType === 'circle' && overlay) { overlay.setRadius(r); }
     });
 
-    // 半宽滑杆 → 走廊 halfWidth（视觉上只画中线，数值实时显示）
+    // 半宽滑杆 / 数字输入 → 走廊 halfWidth，两者双向同步并实时重画覆盖带
+    function setHalfWidth(v, fromNum) {
+      v = Math.min(100, Math.max(3, v));
+      halfWidth = v;
+      if (!fromNum) { $('tm-halfwidth-num').value = v; }
+      $('tm-halfwidth').value = v;
+      if (shapeType === 'corridor') { refreshBand(); syncTextarea(); }
+    }
     $('tm-halfwidth').addEventListener('input', function () {
-      halfWidth = parseInt(this.value, 10);
-      $('tm-halfwidth-val').textContent = halfWidth + ' m';
-      if (shapeType === 'corridor') { syncTextarea(); }
+      setHalfWidth(parseInt(this.value, 10), false);
+    });
+    $('tm-halfwidth-num').addEventListener('input', function () {
+      var v = parseInt(this.value, 10);
+      if (isFinite(v)) { setHalfWidth(v, true); }  // 清空/输入中不打断，等出数再同步
+    });
+    $('tm-halfwidth-num').addEventListener('change', function () {
+      this.value = halfWidth;  // 失焦时把越界/空值回显为实际生效值
     });
 
     // ── 解析已有数据 ─────────────────────────
@@ -285,7 +363,7 @@ window._AMapSecurityConfig = { securityJsCode: "{{ amap_security_code|escapejs }
             if (t.type === 'corridor' && t.halfWidth > 0) {
               halfWidth = Math.round(t.halfWidth);
               $('tm-halfwidth').value = halfWidth;
-              $('tm-halfwidth-val').textContent = halfWidth + ' m';
+              $('tm-halfwidth-num').value = halfWidth;
             }
             if (points.length >= MIN_POINTS[t.type]) { initType = t.type; }
             else { points = []; showHint('已有 trigger 顶点数不足，已按圆形初始化。'); }
