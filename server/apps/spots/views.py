@@ -42,13 +42,13 @@ def validate_coord(lat, lng):
 
 class SpotListView(APIView):
     """
-    GET /api/v1/spots/ — 全量返回所有景点（v4.0 §7.2）
-    不过滤 is_active，客户端自行隐藏。
+    GET /api/v1/spots/ — 返回所有启用景点（v4.0 §7.2）
+    服务端过滤 is_active=True，禁用景点不下发，移动端无需自行隐藏。
     """
     permission_classes = []
 
     def get(self, request):
-        spots = Spot.objects.all().order_by('id')
+        spots = Spot.objects.filter(is_active=True).order_by('id')
         serializer = SpotSerializer(spots, many=True, context={'request': request})
         return Response({
             'ok': True,

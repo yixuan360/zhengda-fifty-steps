@@ -183,3 +183,71 @@ class AdminE2ETest(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             _validate_file_mime(f, ALLOWED_AUDIO_MIME, '音频')
         self.assertIn('文件类型不支持', str(ctx.exception))
+
+    # ═══════════════════════════════════════════════════════
+    # 4. 批量启用/禁用 action + 保存并编辑下一个（_savenext）
+    # ═══════════════════════════════════════════════════════
+
+    def _spot_form_data(self, **overrides):
+        """change 页 POST 所需的最小表单字段"""
+        data = {
+            'name': '编辑甲',
+            'category': 'architecture',
+            'lat': '34.816',
+            'lng': '113.534',
+            'trigger_radius': '50',
+            'summary': '',
+            'description': '编辑页介绍',
+            'is_active': '1',
+        }
+        data.update(overrides)
+        return data
+
+    def test_bulk_disable_action(self):
+        """列表页勾选多行执行“批量禁用”→ 这些景点 is_active=False"""
+        s1 = Spot.objects.create(name='批量禁用甲', lat=34.816, lng=113.534)
+        s2 = Spot.objects.create(name='批量禁用乙', lat=34.816, lng=113.534)
+        resp = self.admin_client.post('/manage/spots/spot/', {
+            'action': 'disable_spots',
+            '_selected_action': [str(s1.id), str(s2.id)],
+            'index': '0',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Spot.objects.get(id=s1.id).is_active)
+        self.assertFalse(Spot.objects.get(id=s2.id).is_active)
+
+    def test_bulk_enable_action(self):
+        """列表页勾选执行“批量启用”→ is_active=True"""
+        s1 = Spot.objects.create(name='批量启用甲', lat=34.816, lng=113.534, is_active=False)
+        resp = self.admin_client.post('/manage/spots/spot/', {
+            'action': 'enable_spots',
+            '_selected_action': [str(s1.id)],
+            'index': '0',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Spot.objects.get(id=s1.id).is_active)
+
+    def test_save_next_redirects_to_next_spot(self):
+        """点击“保存并编辑下一个”→ 保存成功并 302 跳到 id 相邻的下一个景点"""
+        s1 = Spot.objects.create(name='编辑甲', lat=34.816, lng=113.534)
+        s2 = Spot.objects.create(name='编辑乙', lat=34.816, lng=113.534)
+        resp = self.admin_client.post(
+            f'/manage/spots/spot/{s1.id}/change/',
+            self._spot_form_data(name='编辑甲改', _savenext='保存并编辑下一个'),
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, f'/manage/spots/spot/{s2.id}/change/')
+        # 数据已落库（不是仅跳转）
+        self.assertTrue(Spot.objects.filter(id=s1.id, name='编辑甲改').exists())
+
+    def test_save_next_last_spot_returns_to_list(self):
+        """已是最后一个景点时点“保存并编辑下一个”→ 正常保存并回列表页"""
+        s1 = Spot.objects.create(name='唯一景', lat=34.816, lng=113.534)
+        resp = self.admin_client.post(
+            f'/manage/spots/spot/{s1.id}/change/',
+            self._spot_form_data(name='唯一景改', _savenext='保存并编辑下一个'),
+        )
+        self.assertEqual(resp.status_code, 302)
+        # 最后一个 → super().response_change 默认回列表页（含 filters 空串）
+        self.assertEqual(resp.url, '/manage/spots/spot/')
+        self.assertTrue(Spot.objects.filter(id=s1.id, name='唯一景改').exists())

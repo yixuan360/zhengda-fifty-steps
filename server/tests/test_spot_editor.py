@@ -164,3 +164,51 @@ class SpotWriteAPITest(TestCase):
         resp = self.client.delete(self._url(spot.id), **self._headers())
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Spot.objects.filter(id=spot.id).exists())
+
+
+class SpotListAPITest(TestCase):
+    """GET /api/v1/spots/ — 服务端过滤 is_active（禁用景点不下发）"""
+
+    def _create(self, name, is_active=True):
+        return Spot.objects.create(name=name, lat=34.816, lng=113.534, is_active=is_active)
+
+    def test_list_excludes_inactive_spots(self):
+        """禁用景点不出现在列表，totalCount 只统计启用景点"""
+        self._create('启用甲')
+        self._create('启用乙')
+        self._create('禁用丙', is_active=False)
+
+        resp = self.client.get('/api/v1/spots/')
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        names = {s['name'] for s in body['data']['spots']}
+        self.assertIn('启用甲', names)
+        self.assertIn('启用乙', names)
+        self.assertNotIn('禁用丙', names)
+        self.assertEqual(body['data']['totalCount'], 2)
+
+    def test_list_all_disabled_returns_empty(self):
+        """全部禁用时列表为空、totalCount 为 0"""
+        self._create('仅禁用', is_active=False)
+
+        resp = self.client.get('/api/v1/spots/')
+        body = resp.json()
+        self.assertEqual(body['data']['spots'], [])
+        self.assertEqual(body['data']['totalCount'], 0)
+
+    def test_list_only_active_roundtrip(self):
+        """禁用后 totalCount 从 N 降到 N-1，恢复启用后回升（回归保护）"""
+        a = self._create('启用甲')
+        b = self._create('启用乙')
+
+        def total():
+            return self.client.get('/api/v1/spots/').json()['data']['totalCount']
+
+        self.assertEqual(total(), 2)
+        b.is_active = False
+        b.save(update_fields=['is_active'])
+        self.assertEqual(total(), 1)
+        b.is_active = True
+        b.save(update_fields=['is_active'])
+        self.assertEqual(total(), 2)
+        self.assertNotEqual(a.id, b.id)

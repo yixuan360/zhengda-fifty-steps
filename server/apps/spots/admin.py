@@ -3,12 +3,15 @@
 - fieldsets 分组字段
 - list_display 含图片/音频链接
 - MIME 白名单校验
-- mark_audio_ready 批量 action
+- mark_audio_ready / 批量启用 / 批量禁用 action
 - trigger 字段使用高德地图可视化编辑器（TriggerMapWidget）
+- 编辑页支持“保存并编辑下一个”（_savenext）
 """
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils.html import format_html
 from django import forms
 from .models import Spot
@@ -62,10 +65,13 @@ class SpotAdmin(admin.ModelAdmin):
         'trigger_radius', 'audio_link', 'is_active', 'updated_at',
     ]
     list_display_links = ['id', 'name']
+    list_editable = ['is_active']  # 列表页直接勾选启用/禁用，不必进编辑页
     list_filter = ['category', 'is_active']
     search_fields = ['name', 'summary', 'description']
     ordering = ['id']
     readonly_fields = ['created_at', 'updated_at']
+    save_on_top = True   # 长表单顶部也放保存按钮，不用滑到底
+    list_per_page = 200  # 大于现有景点数，一页显示全部，不出现分页/“显示全部”
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -135,7 +141,35 @@ class SpotAdmin(admin.ModelAdmin):
             _validate_file_mime(obj.audio, ALLOWED_AUDIO_MIME, '音频')
         super().save_model(request, obj, form, change)
 
+    # ── 保存并编辑下一个 ─────────────────────────────────
+    # 配合 templates/admin/spots/spot/submit_line.html 的 _savenext 按钮
+
+    def response_change(self, request, obj):
+        if '_savenext' in request.POST:
+            # 先走默认流程（产生“修改成功”消息），再把跳转目标换成下一个景点
+            response = super().response_change(request, obj)
+            next_spot = Spot.objects.filter(id__gt=obj.id).order_by('id').first()
+            if next_spot is not None:
+                url = reverse(
+                    f'admin:{self.opts.app_label}_{self.opts.model_name}_change',
+                    args=[next_spot.pk],
+                )
+                return HttpResponseRedirect(url + self.get_preserved_filters(request))
+            # 已是最后一个 → 回列表页
+            return response
+        return super().response_change(request, obj)
+
     # ── Admin Actions ─────────────────────────────────────
+
+    @admin.action(description='批量启用所选景点')
+    def enable_spots(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'已启用 {updated} 个景点。', messages.SUCCESS)
+
+    @admin.action(description='批量禁用所选景点')
+    def disable_spots(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'已禁用 {updated} 个景点。', messages.SUCCESS)
 
     @admin.action(description='标记为音频就绪')
     def mark_audio_ready(self, request, queryset):
@@ -160,4 +194,4 @@ class SpotAdmin(admin.ModelAdmin):
                 messages.WARNING,
             )
 
-    actions = ['mark_audio_ready']
+    actions = ['enable_spots', 'disable_spots', 'mark_audio_ready']
