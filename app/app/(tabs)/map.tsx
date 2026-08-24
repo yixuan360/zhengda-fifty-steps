@@ -28,10 +28,10 @@ import { syncAll } from '../../services/sync';
 import { getTriggerSignedDistance } from '../../utils/trigger';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
-/** 初始视野矩形：郑大主校区（右上角 113.54206/34.827075，左下角 113.52951/34.808282） */
+/** 初始视野矩形：郑大主校区（西南角 113.52951/34.808306，东北角 113.542057/34.827064） */
 const ZZU_CAMPUS_BOUNDS = {
-  southwest: { latitude: 34.808282, longitude: 113.52951 },
-  northeast: { latitude: 34.827075, longitude: 113.54206 },
+  southwest: { latitude: 34.808306, longitude: 113.52951 },
+  northeast: { latitude: 34.827064, longitude: 113.542057 },
 };
 
 /** 5 次点击激活模拟定位面板 */

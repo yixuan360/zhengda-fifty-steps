@@ -2,7 +2,7 @@
  * 景点全量同步 + 配置拉取
  * v4.0 §3.3：启动/下拉时全量替换，isSyncing 防并发，失败静默兜底
  */
-import { fetchSpots, fetchConfig } from './api';
+import { fetchSpots, fetchConfig, fetchCategories } from './api';
 import { replaceAllSpots, replaceAllConfig } from './database';
 import { useTourStore } from '../stores/tourStore';
 import { prefetchAudios } from './cache';
@@ -57,6 +57,16 @@ export async function syncAll(): Promise<SyncResult> {
       }
     } catch {
       // 静默跳过，沿用本地默认值
+    }
+
+    // 分类：后台新增/修改分类后，下拉刷新即可同步（此前仅冷启动拉取一次）
+    try {
+      const catRes = await fetchCategories();
+      if (catRes.ok && catRes.data.categories?.length) {
+        store.setCategories(catRes.data.categories);
+      }
+    } catch {
+      // 静默跳过，沿用现有分类
     }
   } finally {
     isSyncing = false;

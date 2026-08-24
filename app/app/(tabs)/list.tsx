@@ -34,7 +34,7 @@ export default function ListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [localSyncFailed, setLocalSyncFailed] = useState<boolean|null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['college']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => { try { setSpots(await getAllSpots()); } finally { setLoading(false); } }, [setSpots]);
   useEffect(() => { loadData(); }, [loadData]);
