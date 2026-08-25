@@ -4,6 +4,7 @@
  */
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { getSpotById } from '../../services/database';
@@ -61,6 +62,9 @@ export default function SpotDetailScreen() {
     }
   }, []);
 
+  // Edge-to-edge：滚动到底时需把底部系统导航条高度计入，否则播放按钮被手势条遮挡
+  const insets = useSafeAreaInsets();
+
   if (!id || isNaN(Number(id))) return <View style={[styles.centered,{backgroundColor:Color.pageBg}]}><Text style={{color:Color.caption}}>参数无效</Text></View>;
   if (loading) return <View style={[styles.centered,{backgroundColor:Color.pageBg}]}><ActivityIndicator size='large' color={Color.primary}/></View>;
   if (!spot) return <View style={[styles.centered,{backgroundColor:Color.pageBg}]}><Text style={{color:Color.caption}}>景点不存在</Text></View>;
@@ -79,7 +83,7 @@ export default function SpotDetailScreen() {
     <ScrollView style={[styles.container,{backgroundColor:Color.pageBg}]}>
       <Stack.Screen options={{ title: spot.name, headerStyle: { backgroundColor: Color.pageBg } }}/>
       <Image source={spot.imageUrl && !imageError ? { uri: spot.imageUrl } : PLACEHOLDER_IMG} style={styles.image} resizeMode='cover' onError={()=>setImageError(true)}/>
-      <View style={styles.body}>
+      <View style={[styles.body, { paddingBottom: 32 + insets.bottom }]}>
         {distance != null && (<View style={styles.distanceCard}><View style={styles.distanceDot}/><Text style={styles.distanceText}>距您 {fmtDist(distance)}</Text></View>)}
         <Text style={styles.name}>{spot.name}</Text>
         {spot.summary ? (<View style={styles.section}><Text style={styles.label}>简介</Text><Text style={styles.summary}>{spot.summary}</Text></View>) : null}
