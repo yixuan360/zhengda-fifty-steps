@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
-index cc717fd..0ffafaf 100644
+index cc717fd..580d760 100644
 --- a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
 +++ b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
 @@ -6,6 +6,9 @@ import com.amap.api.maps.AMap
@@ -51,7 +51,7 @@ index cc717fd..0ffafaf 100644
      map.setOnMapClickListener { latLng -> emit(id, "onPress", latLng.toJson()) }
      map.setOnPOIClickListener { poi -> emit(id, "onPressPoi", poi.toJson()) }
      map.setOnMapLongClickListener { latLng -> emit(id, "onLongPress", latLng.toJson()) }
-@@ -151,6 +177,29 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
+@@ -151,6 +177,39 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
      }
    }
  
@@ -70,9 +70,19 @@ index cc717fd..0ffafaf 100644
 +    }
 +  }
 +
-+  /** 延迟到地图加载完成后 fitBounds，否则像素尺寸为 0 时调用会被忽略 */
++  /**
++   * JS 侧在 onLoad 之前把地图渲染为 1x1 占位（map-view.tsx），
++   * 因此 onMapLoaded 回调时视图仍无真实尺寸，fitBounds 会退化为最小缩放级别。
++   * 必须等到视图拿到真实尺寸后再应用初始视野。
++   */
++  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
++    super.onSizeChanged(w, h, oldw, oldh)
++    applyInitialLatLngBounds()
++  }
++
++  /** 延迟到地图加载完成且视图有真实尺寸后 fitBounds，仅首次生效 */
 +  private fun applyInitialLatLngBounds() {
-+    if (mapLoaded && !initialBoundsApplied && initialLatLngBounds != null) {
++    if (mapLoaded && !initialBoundsApplied && initialLatLngBounds != null && width > 1 && height > 1) {
 +      initialBoundsApplied = true
 +      map.moveCamera(CameraUpdateFactory.newLatLngBounds(initialLatLngBounds!!, 60))
 +    }
