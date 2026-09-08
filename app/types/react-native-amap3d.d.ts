@@ -29,8 +29,6 @@ declare module 'react-native-amap3d' {
 
   export interface MapViewProps extends ViewProps {
     initialCameraPosition?: CameraPosition;
-    /** 初始视野：按矩形边界适配（fitBounds，android） */
-    initialLatLngBounds?: LatLngBounds;
     myLocationEnabled?: boolean;
     myLocationButtonEnabled?: boolean;
     compassEnabled?: boolean;

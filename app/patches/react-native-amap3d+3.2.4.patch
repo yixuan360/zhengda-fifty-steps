@@ -1,32 +1,19 @@
 diff --git a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
-index cc717fd..580d760 100644
+index cc717fd..276ebd1 100644
 --- a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
 +++ b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapView.kt
-@@ -6,6 +6,9 @@ import com.amap.api.maps.AMap
+@@ -6,6 +6,7 @@ import com.amap.api.maps.AMap
  import com.amap.api.maps.CameraUpdateFactory
  import com.amap.api.maps.TextureMapView
  import com.amap.api.maps.model.CameraPosition
 +import com.amap.api.maps.model.CustomMapStyleOptions
-+import com.amap.api.maps.model.LatLng
-+import com.amap.api.maps.model.LatLngBounds
  import com.amap.api.maps.model.Marker
  import com.amap.api.maps.model.MyLocationStyle
  import com.facebook.react.bridge.Arguments
-@@ -26,6 +29,9 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
-   private val markerMap = HashMap<String, qiuxiang.amap3d.map_view.Marker>()
-   private val polylineMap = HashMap<String, Polyline>()
-   private var initialCameraPosition: ReadableMap? = null
-+  private var initialLatLngBounds: LatLngBounds? = null
-+  private var initialBoundsApplied = false
-+  private var mapLoaded = false
-   private var locationStyle: MyLocationStyle
- 
-   init {
-@@ -35,7 +41,27 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
+@@ -35,6 +36,22 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
      locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
      map.myLocationStyle = locationStyle
  
--    map.setOnMapLoadedListener { emit(id, "onLoad") }
 +    // 自定义地图样式：读取 assets 下的 style.data / style_extra.data（高德自定义样式，去 POI 标注）。
 +    // 若缺失或加载失败则降级为默认底图，不影响地图可用性。
 +    try {
@@ -43,68 +30,9 @@ index cc717fd..580d760 100644
 +      // 样式加载失败：保持默认底图
 +    }
 +
-+    map.setOnMapLoadedListener {
-+      mapLoaded = true
-+      applyInitialLatLngBounds()
-+      emit(id, "onLoad")
-+    }
+     map.setOnMapLoadedListener { emit(id, "onLoad") }
      map.setOnMapClickListener { latLng -> emit(id, "onPress", latLng.toJson()) }
      map.setOnPOIClickListener { poi -> emit(id, "onPressPoi", poi.toJson()) }
-     map.setOnMapLongClickListener { latLng -> emit(id, "onLongPress", latLng.toJson()) }
-@@ -151,6 +177,39 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
-     }
-   }
- 
-+  /** 初始视野：按矩形边界适配（fitBounds），仅首次生效 */
-+  fun setInitialLatLngBounds(bounds: ReadableMap) {
-+    if (initialLatLngBounds == null) {
-+      val southwest = bounds.getMap("southwest")?.toLatLng()
-+      val northeast = bounds.getMap("northeast")?.toLatLng()
-+      if (southwest != null && northeast != null) {
-+        initialLatLngBounds = LatLngBounds.builder()
-+          .include(southwest)
-+          .include(northeast)
-+          .build()
-+        applyInitialLatLngBounds()
-+      }
-+    }
-+  }
-+
-+  /**
-+   * JS 侧在 onLoad 之前把地图渲染为 1x1 占位（map-view.tsx），
-+   * 因此 onMapLoaded 回调时视图仍无真实尺寸，fitBounds 会退化为最小缩放级别。
-+   * 必须等到视图拿到真实尺寸后再应用初始视野。
-+   */
-+  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-+    super.onSizeChanged(w, h, oldw, oldh)
-+    applyInitialLatLngBounds()
-+  }
-+
-+  /** 延迟到地图加载完成且视图有真实尺寸后 fitBounds，仅首次生效 */
-+  private fun applyInitialLatLngBounds() {
-+    if (mapLoaded && !initialBoundsApplied && initialLatLngBounds != null && width > 1 && height > 1) {
-+      initialBoundsApplied = true
-+      map.moveCamera(CameraUpdateFactory.newLatLngBounds(initialLatLngBounds!!, 60))
-+    }
-+  }
-+
-   fun call(args: ReadableArray?) {
-     val id = args?.getDouble(0)!!
-     when (args.getString(1)) {
-diff --git a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapViewManager.kt b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapViewManager.kt
-index 3e8ce69..5269f82 100644
---- a/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapViewManager.kt
-+++ b/node_modules/react-native-amap3d/lib/android/src/main/java/qiuxiang/amap3d/map_view/MapViewManager.kt
-@@ -150,4 +150,9 @@ internal class MapViewManager : ViewGroupManager<MapView>() {
-   fun setCameraPosition(view: MapView, center: ReadableMap) {
-     view.map.moveCamera(CameraUpdateFactory.changeLatLng(center.toLatLng()))
-   }
-+
-+  @ReactProp(name = "initialLatLngBounds")
-+  fun setInitialLatLngBounds(view: MapView, bounds: ReadableMap) {
-+    view.setInitialLatLngBounds(bounds)
-+  }
- }
 diff --git a/node_modules/react-native-amap3d/lib/src/component.ts b/node_modules/react-native-amap3d/lib/src/component.ts
 index 95e6081..f0e8867 100644
 --- a/node_modules/react-native-amap3d/lib/src/component.ts
@@ -118,19 +46,3 @@ index 95e6081..f0e8867 100644
      }
    }
  }
-diff --git a/node_modules/react-native-amap3d/lib/src/map-view.tsx b/node_modules/react-native-amap3d/lib/src/map-view.tsx
-index e97cee5..3ad63f2 100644
---- a/node_modules/react-native-amap3d/lib/src/map-view.tsx
-+++ b/node_modules/react-native-amap3d/lib/src/map-view.tsx
-@@ -24,6 +24,11 @@ export interface MapViewProps extends ViewProps {
-    */
-   initialCameraPosition?: CameraPosition;
- 
-+  /**
-+   * 初始视野：按矩形边界适配（fitBounds，android）
-+   */
-+  initialLatLngBounds?: LatLngBounds;
-+
-   /**
-    * 是否显示当前定位
-    */

@@ -25,10 +25,14 @@ import { initAMap } from '../../services/amap';
 import { getTriggerSignedDistance } from '../../utils/trigger';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 
-/** 初始视野矩形：郑大主校区（西南角 113.52951/34.808306，东北角 113.542057/34.827064） */
-const ZZU_CAMPUS_BOUNDS = {
-  southwest: { latitude: 34.808306, longitude: 113.52951 },
-  northeast: { latitude: 34.827064, longitude: 113.542057 },
+/** 初始视野：郑大主校区中心 + 缩放级别。
+ *  固定 center/zoom（而非 fitBounds），不依赖高德投影（projection）就绪的时序，
+ *  避免地图初始化时因投影未同步导致缩放级别退化到最小。 */
+const ZZU_INITIAL_CAMERA = {
+  target: { latitude: 34.8177, longitude: 113.5358 },
+  zoom: 15,
+  tilt: 0,
+  bearing: 0,
 };
 
 /** 5 次点击激活模拟定位面板 */
@@ -188,7 +192,7 @@ export default function MapScreen() {
         <MapView
           ref={mapRef}
           style={styles.map}
-          initialLatLngBounds={ZZU_CAMPUS_BOUNDS}
+          initialCameraPosition={ZZU_INITIAL_CAMERA}
           myLocationButtonEnabled={false}
           rotateGesturesEnabled={false}
           tiltGesturesEnabled={false}
