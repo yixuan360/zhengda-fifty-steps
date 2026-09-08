@@ -43,9 +43,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'WAKE_LOCK',
     ],
   },
+  // EAS Update 热更新：url 对应当前 EAS projectId；runtimeVersion 用指纹，
+  // 原生未变时指纹不变，纯 JS bundle 可推给已装的老 APK
+  updates: {
+    url: 'https://u.expo.dev/1896ff8f-f0d8-40e0-a72e-ed8f7a12c1a2',
+    enabled: true,
+    fallbackToCacheTimeout: 0,
+    checkAutomatically: 'ON_LOAD', // App 冷启动时后台检查新 JS
+  },
+  runtimeVersion: { policy: 'fingerprint' },
   plugins: [
     'expo-router',
     'expo-sqlite',
+    'expo-updates',
     // 高德 Android Key：prebuild 时注入 <meta-data com.amap.api.v2.apikey>
     ['./plugins/withAMapKey', { apiKey: process.env.EXPO_PUBLIC_AMAP_ANDROID_KEY ?? 'YOUR_AMAP_ANDROID_KEY' }],
     // 排除独立 location SDK（3dmap 9.x 已内置定位类），解决 Duplicate class 构建失败
