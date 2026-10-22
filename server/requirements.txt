@@ -17,6 +17,9 @@ edge-tts>=7.0
 # 文脉叙事引擎：向量库（T2 起）
 chromadb>=1.0
 
+# 文脉叙事引擎：OpenAI 兼容 LLM 客户端（T3 起）
+openai>=1.0
+
 # 测试
 pytest>=8.0
 pytest-django>=4.0

@@ -2,10 +2,12 @@
 文脉叙事引擎 T1 — 数据模型 + 人审 Admin 测试
 覆盖：卡片创建默认值 / 状态流转 / 批量采纳与驳回 / ReviewTask 落库 / 索引生效。
 """
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 
+from apps.narrative.admin import KnowledgeItemAdmin
 from apps.narrative.models import KnowledgeItem, ReviewTask
 from apps.spots.models import Spot
 
@@ -118,6 +120,24 @@ class KnowledgeItemAdminTest(TestCase):
                       f'?spot__id__exact={self.spot.id}'):
             response = self.admin_client.get(KNOWLEDGE_URL + query)
             self.assertEqual(response.status_code, 200, msg=query)
+
+    # ── 禁止物理删除 ──────────────────────────────────────
+
+    def test_admin_delete_is_forbidden(self):
+        """删除权限关闭：下架只能改状态，不能物理删除卡片。"""
+        item = self._make_item()
+        request = RequestFactory().get(KNOWLEDGE_URL)
+        request.user = self.admin_user
+        admin_instance = KnowledgeItemAdmin(KnowledgeItem, admin.site)
+        self.assertFalse(admin_instance.has_delete_permission(request, item))
+
+        self.admin_client.post(KNOWLEDGE_URL, {
+            'action': 'delete_selected',
+            '_selected_action': [str(item.id)],
+            'index': '0',
+            'post': 'yes',
+        })
+        self.assertTrue(KnowledgeItem.objects.filter(id=item.id).exists())
 
     # ── 批量采纳 ──────────────────────────────────────────
 

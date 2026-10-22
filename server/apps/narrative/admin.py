@@ -43,6 +43,10 @@ class KnowledgeItemAdmin(admin.ModelAdmin):
         text = obj.fact_text
         return text if len(text) <= 50 else f'{text[:50]}…'
 
+    def has_delete_permission(self, request, obj=None):
+        """禁止物理删除：下架统一走状态改为 rejected，由 publish_vector 清理向量。"""
+        return False
+
     # ── Admin Actions ─────────────────────────────────────
 
     @admin.action(description='批量采纳所选事实卡片（待人审 → 已发布）')
