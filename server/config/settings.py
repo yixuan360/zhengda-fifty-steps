@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.spots',
     'apps.accounts',
     'apps.config',
+    'apps.narrative',
 ]
 
 MIDDLEWARE = [
