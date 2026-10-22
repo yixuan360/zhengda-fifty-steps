@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/v1/spots/', include('apps.spots.urls')),
     path('api/v1/config/', include('apps.config.urls')),
     path('api/v1/auth/', include('apps.accounts.urls')),
+    path('api/v2/', include('apps.narrative.urls')),
 ]
 
 # 开发环境：Django 直接 serve media 文件
