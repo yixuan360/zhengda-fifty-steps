@@ -144,13 +144,19 @@ class Command(BaseCommand):
             if changed:
                 item.source_refs = merged
                 update_fields = ['source_refs', 'updated_at']
-                if (
-                    item.confidence == 'single'
-                    and len(old_refs) == 1
-                    and len(merged) > len(old_refs)
-                ):
-                    item.confidence = 'cross'
-                    update_fields.append('confidence')
+
+                # 双源及以上视为双源印证；人工确认过的卡片不改
+                if item.confidence != 'human':
+                    if len(merged) >= 2:
+                        new_confidence = 'cross'
+                    elif len(merged) == 1:
+                        new_confidence = 'single'
+                    else:
+                        new_confidence = item.confidence
+                    if new_confidence != item.confidence:
+                        item.confidence = new_confidence
+                        update_fields.append('confidence')
+
                 item.save(update_fields=update_fields)
                 updated += 1
 

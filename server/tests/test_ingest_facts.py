@@ -231,7 +231,8 @@ def test_ingest_prompts_are_chinese_and_include_description(spot, llm):
     assert '事实卡片' in call['system']
     assert '只能' in call['system']
     assert 'source_refs' in call['system']
-    assert '至少产出 1 张 depth=1' in call['system']
+    assert '只产出素材真正支持的 dimension' in call['system']
+    assert '每个被覆盖的 dimension 至少产出 1 张 depth=1' in call['system']
     assert 'academy 仅限学科设置' in call['system']
     assert '校训、题词、历史事件、建设沿革一律归 history' in call['system']
     assert '景点介绍' in call['user']
@@ -324,7 +325,9 @@ def test_ingest_reports_depth1_coverage(spot, llm, capsys):
     assert 'architecture（建筑肌理）：无' in captured.out
     assert 'academy（学科人文）：无' in captured.out
     assert 'history（校史城史）：有' in captured.out
-    assert 'depth=1 概览层未覆盖：architecture、academy' in captured.err
+    # 诚实稀疏：academy 完全没有素材，不告警；architecture 有素材但缺 d1，告警
+    assert 'depth=1 概览层未覆盖：architecture' in captured.err
+    assert 'academy' not in captured.err
 
 
 def test_ingest_dry_run_prints_jsonl_without_writing(spot, llm, capsys):
@@ -399,6 +402,33 @@ def test_enrich_merges_sources_and_upgrades_confidence(spot, llm):
     item.refresh_from_db()
     assert len(item.source_refs) == 2
     assert item.confidence == 'cross'
+
+
+def test_enrich_upgrades_zero_source_card_with_two_sources(spot, llm):
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学校史馆', 'url': 'https://history.zzu.edu.cn/zhonglou'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert len(item.source_refs) == 2
+    assert item.confidence == 'cross'
+
+
+def test_enrich_keeps_single_with_only_one_added_source(spot, llm):
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert len(item.source_refs) == 1
+    assert item.confidence == 'single'
 
 
 def test_enrich_keeps_single_when_no_new_source(spot, llm):

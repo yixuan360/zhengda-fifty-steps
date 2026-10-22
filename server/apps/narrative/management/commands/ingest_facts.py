@@ -27,7 +27,7 @@ CONFIDENCE_KEYS = ['single', 'cross']
 SYSTEM_PROMPT = """你是郑州大学校园导览的知识编辑。请把给定的景点介绍拆解为若干条“事实卡片”。
 每张卡片必须满足：
 - dimension：只能是 nature（自然山水）、architecture（建筑肌理）、academy（学科人文）、history（校史城史）之一；
-- 四个 dimension（nature、architecture、academy、history）每个维度至少产出 1 张 depth=1 的概览卡片（30 秒可讲完的核心信息）；
+- 只产出素材真正支持的 dimension，不要强行覆盖四个维度；每个被覆盖的 dimension 至少产出 1 张 depth=1 的概览卡片（30 秒可讲完的核心信息）；
 - 分类标准：academy 仅限学科设置、学院、科研平台、人才培养相关；校训、题词、历史事件、建设沿革一律归 history；
 - depth：1 到 5 的整数，1=30 秒概览，2=基础介绍，3=细节故事，4=学科或历史纵深，5=中原文明坐标；
 - fact_text：一句可以独立引用、可以被来源证实的事实陈述，不要空泛抒情，不要编造；
@@ -216,12 +216,13 @@ def _coverage_line(cards, dimension=None):
     parts = []
     missing = []
     for key, label in dimensions:
-        covered = any(
-            card['dimension'] == key and card['depth'] == 1
-            for card in cards
-        )
+        dimension_cards = [
+            card for card in cards if card['dimension'] == key
+        ]
+        covered = any(card['depth'] == 1 for card in dimension_cards)
         parts.append(f'{key}（{label}）：{"有" if covered else "无"}')
-        if not covered:
+        # 诚实稀疏：整个维度没有素材是允许的；有素材却缺 depth=1 才提示
+        if dimension_cards and not covered:
             missing.append(key)
     return 'depth=1 覆盖：' + '；'.join(parts), missing
 
