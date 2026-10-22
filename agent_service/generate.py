@@ -206,12 +206,12 @@ def generate_narrative(spot_id, dimension, current_depth,
 
         pairs = _parse_citations(raw_text)
         if not pairs or any(fact_id not in fact_by_id for fact_id, _ in pairs):
-            logger.info('引用缺失或含未知 id（第 %s 次）', attempt + 1)
+            logger.warning('引用缺失或含未知 id（第 %s 次）', attempt + 1)
             continue
 
         try:
             if not _passes_citation_check(pairs, fact_by_id):
-                logger.info('引用相似度校验未通过（第 %s 次）', attempt + 1)
+                logger.warning('引用相似度校验未通过（第 %s 次）', attempt + 1)
                 continue
         except Exception as exc:
             logger.warning('引用校验异常（第 %s 次）：%s', attempt + 1, exc)
