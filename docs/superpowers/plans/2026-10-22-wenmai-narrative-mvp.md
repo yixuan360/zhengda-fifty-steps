@@ -22,6 +22,7 @@
 7. **密钥只进服务端 `.env`**，禁止写入任何入库文件；`.env.example` 只放占位符。
 8. **每个任务独立可测、独立提交**；提交信息用中文 conventional commits（`feat(narrative): ...`）。
 9. **测试**：后端 pytest（沿用 `server/tests/` 结构）；App 端至少 `npx tsc --noEmit` 通过 + 关键纯函数用 `npm run test:trigger` 同款 node 直跑脚本模式。
+10. **解释器纪律**：后端一切命令（migrate / pytest / manage.py）必须用项目 venv：`server/.venv/Scripts/python.exe`（uv 管理，无 pip；等效查看命令 `uv pip list --python .venv/Scripts/python.exe`）。**禁止用全局 Python**——曾因此误用 Django 6.0.7 产生版本噪音（实际项目版本 4.2.30）。
 
 ---
 
