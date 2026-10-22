@@ -46,6 +46,8 @@ def _system_prompt(max_seconds):
         '你是郑州大学校园导览讲解员。只能使用给定的事实卡片组织讲解，'
         '不得新增事实，不得推测或补充卡片之外的信息。'
         '每陈述一条事实，就在该句末尾标注引用，格式为 [k<卡片编号>]。'
+        '引用句要尽量贴近卡片原文的关键词和措辞；'
+        '路线引导、语气词等口语化铺垫请单独成句，不要和引用句混在一起。'
         f'语气亲切自然，适合步行收听，时长预算为 {max_seconds} 秒。'
     )
 
@@ -94,6 +96,8 @@ def _parse_citations(raw_text):
 def _clean_text(raw_text):
     text = MARKER_RE.sub('', raw_text)
     text = re.sub(r'[ \t]+', ' ', text)
+    # 去掉中文标点前的多余空格（引用标记移除后常见）
+    text = re.sub(r'\s+([，。！？、；：])', r'\1', text)
     return text.strip()
 
 

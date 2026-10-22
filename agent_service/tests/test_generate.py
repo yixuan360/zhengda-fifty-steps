@@ -118,7 +118,12 @@ def test_generate_normal_path(generate_setup, monkeypatch):
     assert result['audio_url'] == '/narrative-media/test.mp3'
     assert len(calls) == 1
     assert '只能使用' in calls[0][0]
+    assert '引用句要尽量贴近卡片原文' in calls[0][0]
     assert '[k101]' in calls[0][1]
+
+
+def test_clean_text_removes_markers_and_space_before_punctuation():
+    assert generate._clean_text('钟楼高 56 米 [k101]。') == '钟楼高 56 米。'
 
 
 def test_generate_retries_when_citation_missing(generate_setup, monkeypatch):
