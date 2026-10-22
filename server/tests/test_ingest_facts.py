@@ -98,6 +98,105 @@ def test_chat_json_requires_model(monkeypatch):
         llm_client.chat_json('系统', '用户', {})
 
 
+# ── json_schema 被拒时的 json_object 回退 ─────────────────
+
+SIMPLE_SCHEMA = {
+    'type': 'object',
+    'properties': {'cards': {'type': 'array'}},
+    'required': ['cards'],
+    'additionalProperties': False,
+}
+
+
+class FakeBadRequestError(Exception):
+    """替代 openai.BadRequestError，避免构造真实 HTTP 响应。"""
+
+
+class _FakeMessage:
+    def __init__(self, content):
+        self.content = content
+
+
+class _FakeChoice:
+    def __init__(self, content):
+        self.message = _FakeMessage(content)
+
+
+class _FakeResponse:
+    def __init__(self, content):
+        self.choices = [_FakeChoice(content)]
+
+
+class _FakeCompletions:
+    def __init__(self, results):
+        self.results = results
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        result = self.results[len(self.calls) - 1]
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+class _FakeChat:
+    def __init__(self, completions):
+        self.completions = completions
+
+
+class _FakeOpenAI:
+    def __init__(self, completions):
+        self.chat = _FakeChat(completions)
+
+
+def _patch_llm_client(monkeypatch, results):
+    completions = _FakeCompletions(results)
+    monkeypatch.setattr(
+        llm_client, 'config', lambda name, default='': 'test-value',
+    )
+    monkeypatch.setattr(llm_client, 'BadRequestError', FakeBadRequestError)
+    monkeypatch.setattr(
+        llm_client, 'OpenAI', lambda **kwargs: _FakeOpenAI(completions),
+    )
+    return completions
+
+
+def test_chat_json_falls_back_to_json_object_on_bad_request(monkeypatch):
+    completions = _patch_llm_client(monkeypatch, [
+        FakeBadRequestError('json_schema not supported'),
+        _FakeResponse('{"cards": [{"dimension": "nature"}]}'),
+    ])
+
+    result = llm_client.chat_json('系统', '用户', SIMPLE_SCHEMA)
+
+    assert result == {'cards': [{'dimension': 'nature'}]}
+    assert len(completions.calls) == 2
+    assert completions.calls[0]['response_format']['type'] == 'json_schema'
+    assert completions.calls[1]['response_format'] == {'type': 'json_object'}
+
+
+def test_chat_json_fallback_invalid_json_raises(monkeypatch):
+    completions = _patch_llm_client(monkeypatch, [
+        FakeBadRequestError('json_schema not supported'),
+        _FakeResponse('这不是 JSON'),
+    ])
+
+    with pytest.raises(json.JSONDecodeError):
+        llm_client.chat_json('系统', '用户', SIMPLE_SCHEMA)
+    assert len(completions.calls) == 2
+
+
+def test_chat_json_fallback_schema_mismatch_raises(monkeypatch):
+    _patch_llm_client(monkeypatch, [
+        FakeBadRequestError('json_schema not supported'),
+        _FakeResponse('{"wrong": []}'),
+    ])
+
+    with pytest.raises(ValueError, match='缺少字段 cards'):
+        llm_client.chat_json('系统', '用户', SIMPLE_SCHEMA)
+
+
 # ═══════════════════════════════════════════════════════════
 # ingest_facts
 # ═══════════════════════════════════════════════════════════
