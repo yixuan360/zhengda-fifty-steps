@@ -14,8 +14,10 @@ import { useAudioStore } from '../../stores/audioStore';
 import { getPlayer } from '../../hooks/useAudioPlayer';
 import { Color, Spacing, Radius, Shadow } from '../../constants/theme';
 import type { Spot } from '../../types';
+import DepthNarrativeCard from '../../components/narrative/DepthNarrativeCard';
 
 const PLACEHOLDER_IMG = require('../../assets/icon.png');
+const narrativeEnabled = process.env.EXPO_PUBLIC_NARRATIVE_ENABLED === 'true';
 
 function fmtDist(m: number): string {
   return m < 1000 ? '约 ' + Math.round(m) + 'm' : '约 ' + (m / 1000).toFixed(1) + 'km';
@@ -96,6 +98,7 @@ export default function SpotDetailScreen() {
         ) : (
           <View style={styles.audioHint}><Text style={styles.audioHintText}>📝 该景点暂无语音导览</Text><Text style={styles.audioHintSub}>请连接服务器后下拉刷新同步最新数据</Text></View>
         )}
+        {narrativeEnabled && <DepthNarrativeCard spotId={spot.id} audioUrl={spot.audioUrl} spotName={spot.name} />}
       </View>
     </ScrollView>
   );
