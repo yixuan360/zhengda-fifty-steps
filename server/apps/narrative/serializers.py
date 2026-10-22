@@ -6,6 +6,12 @@ from .models import KnowledgeItem, NarrativeLog
 VALID_DIMENSIONS = {key for key, _ in KnowledgeItem.DIMENSIONS}
 
 
+class DimensionQuerySerializer(serializers.Serializer):
+    """GET /api/v2/narrative/dimensions/ 的查询参数。"""
+
+    spot_id = serializers.IntegerField(min_value=1)
+
+
 class NarrativeLogSerializer(serializers.ModelSerializer):
     """T5 记账接口：body 为 NarrativeLog 字段子集，created_at 由服务器补。"""
 

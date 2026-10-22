@@ -7,9 +7,11 @@ import json
 from django.core.cache import cache
 from django.test import Client, TestCase
 
-from apps.narrative.models import NarrativeLog
+from apps.narrative.models import KnowledgeItem, NarrativeLog
+from apps.spots.models import Spot
 
 LOG_URL = '/api/v2/narrative/log/'
+DIMENSIONS_URL = '/api/v2/narrative/dimensions/'
 
 FULL_PAYLOAD = {
     'spot_id': 16,
@@ -113,3 +115,58 @@ class NarrativeLogApiTest(TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertFalse(response.json()['ok'])
         self.assertEqual(NarrativeLog.objects.count(), 30)
+
+
+class NarrativeDimensionsApiTest(TestCase):
+    """T5.5 — 已发布卡片的维度覆盖查询。"""
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.spot = Spot.objects.create(
+            name='钟楼', lat=34.8166, lng=113.5345,
+            description='钟楼介绍',
+        )
+        self.other_spot = Spot.objects.create(
+            name='眉湖', lat=34.8150, lng=113.5330,
+            description='眉湖介绍',
+        )
+
+    def _make_item(self, spot, dimension, status='approved'):
+        return KnowledgeItem.objects.create(
+            spot=spot, dimension=dimension, depth=1,
+            fact_text=f'{dimension} 事实', status=status,
+        )
+
+    def test_approved_counts_grouped_and_zero_dimensions_omitted(self):
+        self._make_item(self.spot, 'architecture')
+        self._make_item(self.spot, 'architecture')
+        self._make_item(self.spot, 'history')
+        self._make_item(self.spot, 'nature', status='pending')
+        self._make_item(self.spot, 'academy', status='rejected')
+        self._make_item(self.other_spot, 'nature')   # 其他景点不计入
+
+        response = self.client.get(DIMENSIONS_URL, {'spot_id': self.spot.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data'], [
+            {'dimension': 'architecture', 'approved_count': 2},
+            {'dimension': 'history', 'approved_count': 1},
+        ])
+
+    def test_all_pending_returns_empty_list(self):
+        self._make_item(self.spot, 'architecture', status='pending')
+        self._make_item(self.spot, 'history', status='pending')
+
+        response = self.client.get(DIMENSIONS_URL, {'spot_id': self.spot.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data'], [])
+
+    def test_missing_spot_id_returns_400(self):
+        response = self.client.get(DIMENSIONS_URL)
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_spot_id_returns_400(self):
+        response = self.client.get(DIMENSIONS_URL, {'spot_id': 'abc'})
+        self.assertEqual(response.status_code, 400)
