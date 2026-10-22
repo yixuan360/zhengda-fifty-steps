@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="now">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>郑大五十步 · 视觉配色优化提案</title>
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap">
+<style>
+/* ============ 四套主题（来自现状源码 + 三套提案，全部变量化） ============ */
+:root, :root[data-theme="now"]{
+  --primary:#1A7A5A; --primaryDeep:#1A7A5A; --primarySoft:#E8F5F0; --accent:#C67B4B;
+  --pageBg:#F2F4F6; --cardBg:rgba(255,255,255,.88); --cardBorder:rgba(255,255,255,.6);
+  --heading:#1A1A1A; --body:#4A4A4A; --caption:#999; --divider:#EAEAEA; --error:#D94A4A;
+  --distanceBg:#F0F8F5;
+  --marker:#1B9CFC; --fenceFill:rgba(26,122,90,.15); --fenceStroke:rgba(26,122,90,.45);
+  --barWarn:rgba(217,74,74,.88); --barFair:rgba(198,123,75,.92); --barFairText:#fff; --barMock:rgba(240,180,41,.95); --barMockText:#3D2E00;
+  --darkPanel:rgba(20,22,26,.94);
+  --cat-college:#8B1A2B; --cat-nature:#2E7D32; --cat-architecture:#6D4C41; --cat-teaching:#00838F; --cat-service:#7B1FA2; --cat-humanity:#F9A825;
+}
+:root[data-theme="a"]{
+  --primary:#14594C; --primaryDeep:#14594C; --primarySoft:#E3F0EB; --accent:#B9753F;
+  --pageBg:#F6F4EF; --cardBg:rgba(255,255,252,.88); --cardBorder:rgba(255,255,255,.7);
+  --heading:#1D1D1B; --body:#45453F; --caption:#8A8A80; --divider:#E7E4DC; --error:#C23A3A;
+  --distanceBg:#EDF5F0;
+  --marker:#2F7D68; --fenceFill:rgba(20,89,76,.16); --fenceStroke:rgba(20,89,76,.48);
+  --barWarn:rgba(194,58,58,.9); --barFair:rgba(185,117,63,.92); --barFairText:#1D1D1B; --barMock:rgba(238,178,63,.95); --barMockText:#3B2E14;
+  --darkPanel:rgba(24,26,24,.94);
+  --cat-college:#3B5B6E; --cat-nature:#4F7A52; --cat-architecture:#8A5A33; --cat-teaching:#2F7A7A; --cat-service:#7A5C7E; --cat-humanity:#B08A2E;
+}
+:root[data-theme="b"]{
+  --primary:#2F5E55; --primaryDeep:#2F5E55; --primarySoft:#E4EFEA; --accent:#B4432F;
+  --pageBg:#F5F1E7; --cardBg:rgba(255,253,246,.9); --cardBorder:rgba(255,255,255,.65);
+  --heading:#26231D; --body:#4A463D; --caption:#8C8678; --divider:#E4DFD2; --error:#C03A2E;
+  --distanceBg:#EDF1EA;
+  --marker:#B4432F; --fenceFill:rgba(47,94,85,.16); --fenceStroke:rgba(47,94,85,.5);
+  --barWarn:rgba(192,58,46,.9); --barFair:rgba(185,106,59,.92); --barFairText:#26231D; --barMock:rgba(216,166,66,.95); --barMockText:#3A2E12;
+  --darkPanel:rgba(30,28,24,.94);
+  --cat-college:#33505C; --cat-nature:#4E7A5E; --cat-architecture:#9A5B3A; --cat-teaching:#3F6B78; --cat-service:#6E5A72; --cat-humanity:#C0952E;
+}
+:root[data-theme="c"]{
+  --primary:#12A879; --primaryDeep:#0E8A62; --primarySoft:#E0F7EF; --accent:#F2A93B;
+  --pageBg:#F7F9F8; --cardBg:rgba(255,255,255,.92); --cardBorder:rgba(255,255,255,.8);
+  --heading:#15211C; --body:#3D4A44; --caption:#6E7C75; --divider:#E8EDEA; --error:#E5484D;
+  --distanceBg:#EAF6F0;
+  --marker:#12A879; --fenceFill:rgba(18,168,121,.16); --fenceStroke:rgba(18,168,121,.5);
+  --barWarn:rgba(229,72,77,.9); --barFair:rgba(242,169,59,.94); --barFairText:#3A2E12; --barMock:rgba(242,169,59,.96); --barMockText:#3A2E12;
+  --darkPanel:rgba(18,22,20,.94);
+  --cat-college:#C43D4E; --cat-nature:#1FA268; --cat-architecture:#C77B3D; --cat-teaching:#1B9AAA; --cat-service:#7C5CBF; --cat-humanity:#EE7CA0;
+}
+
+/* ============ 提案页基础 ============ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+body{font-family:'Noto Sans SC',-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#F1EFEA;color:#26231D;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.kicker{font-size:12px;font-weight:700;letter-spacing:2.5px;color:#8A7A5C;text-transform:uppercase}
+h2.sec{font-size:26px;font-weight:900;letter-spacing:-.3px;margin:8px 0 4px}
+.sec-sub{font-size:14px;color:#6B655A;margin-bottom:22px}
+
+/* 头部 */
+.page-head{background:#1E2622;color:#fff;padding:40px 0 34px;border-bottom:4px solid #2F5E55}
+.page-head .kicker{color:#9DB5AA}
+.page-head h1{font-size:30px;font-weight:900;letter-spacing:-.4px;margin-top:6px}
+.page-head .sub{font-size:13.5px;color:rgba(255,255,255,.72);margin-top:8px;max-width:820px}
+.page-head .meta{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+.meta-tag{font-size:12px;font-weight:500;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85)}
+
+/* 诊断 */
+.diag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.diag{background:#fff;border:1px solid #E7E2D8;border-radius:14px;padding:16px 18px;box-shadow:0 2px 8px rgba(60,50,30,.05)}
+.diag .d-no{font-size:11px;font-weight:700;color:#B4432F;letter-spacing:1px}
+.diag .d-t{font-size:14.5px;font-weight:700;margin:6px 0 4px}
+.diag .d-x{font-size:12.5px;color:#6B655A;line-height:1.65}
+.diag .d-x code{background:#F4F1EA;border:1px solid #E7E2D8;border-radius:4px;padding:0 5px;font-size:11.5px;color:#9A5B3A}
+
+/* 方案卡片 */
+.schemes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.scheme{background:#fff;border:1px solid #E7E2D8;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 3px 12px rgba(60,50,30,.06)}
+.scheme .s-top{padding:18px 20px 14px;color:#fff}
+.scheme .s-name{font-size:19px;font-weight:900;letter-spacing:.2px}
+.scheme .s-tag{font-size:12px;font-weight:600;margin-top:3px;opacity:.9}
+.scheme .s-body{padding:16px 20px 18px;flex:1;display:flex;flex-direction:column;gap:12px}
+.scheme .s-idea{font-size:13px;color:#4A463D;line-height:1.7}
+.scheme .s-changes{list-style:none;display:flex;flex-direction:column;gap:6px}
+.scheme .s-changes li{font-size:12.5px;color:#5E5850;line-height:1.6;padding-left:14px;position:relative}
+.scheme .s-changes li::before{content:'';position:absolute;left:1px;top:8px;width:5px;height:5px;border-radius:2px;background:currentColor;opacity:.55}
+.scheme .s-read{margin-top:auto;background:#F7F4EE;border:1px dashed #DFD8C8;border-radius:10px;padding:10px 12px;font-size:12px;color:#5E5850;line-height:1.6}
+.scheme .s-read b{color:#26231D}
+.scheme .s-pros{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.scheme .s-pros span{font-size:11.5px;padding:3px 10px;border-radius:999px;background:#F0EDE5;border:1px solid #E2DCCD;color:#6B655A}
+.scheme .s-apply{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 20px 18px;padding:11px 0;border-radius:12px;border:none;background:#26231D;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .12s}
+.scheme .s-apply:hover{transform:translateY(-1px)}
+/* 色板条 */
+.s-strip{display:flex;gap:6px;padding:14px 20px 0;flex-wrap:wrap}
+.s-strip .ss{flex:1 1 0;min-width:34px}
+.s-strip .ss .sw{height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.55)}
+.s-strip .ss .swl{font-size:10px;color:#8A867C;text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-strip{display:flex;gap:5px;padding:0 20px}
+.cat-strip .cs{flex:1;height:8px;border-radius:4px}
+
+/* 实时预览区 */
+.preview-stage{background:#E9E6DE;border:1px solid #DDD8CC;border-radius:20px;padding:26px 24px 30px}
+.ctlbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:20px}
+.ctl-group{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #DFD9CC;border-radius:12px;padding:5px;box-shadow:0 1px 4px rgba(60,50,30,.05)}
+.ctl-label{font-size:11.5px;font-weight:700;color:#8A867C;padding:0 6px 0 8px;letter-spacing:1px}
+.ctl-btn{font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;border:none;background:transparent;color:#6B655A;cursor:pointer;font-family:inherit}
+.ctl-btn.on{background:#26231D;color:#fff}
+.ctl-btn--demo{background:#F4F1EA;border:1px solid #E2DCCD;color:#5E5850}
+.ctl-btn--demo:hover{border-color:#B4432F;color:#B4432F}
+.preview-flex{display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone-side{flex:0 0 auto}
+.phone-caption{max-width:414px;margin-top:14px;font-size:12.5px;color:#6B655A;background:#F6F3EC;border-radius:10px;padding:10px 14px;line-height:1.7}
+.phone-caption b{color:#26231D}
+.aside{flex:1 1 330px;min-width:300px;max-width:430px;display:flex;flex-direction:column;gap:14px}
+.aside-card{background:#fff;border:1px solid #E7E2D8;border-radius:14px;padding:16px 18px}
+.aside-card h4{font-size:14px;font-weight:800;margin-bottom:10px}
+.aside-card .al{list-style:none;display:flex;flex-direction:column;gap:7px}
+.aside-card .al li{font-size:12.5px;color:#5E5850;line-height:1.65;padding-left:14px;position:relative}
+.aside-card .al li::before{content:'';position:absolute;left:1px;top:8px;width:5px;height:5px;border-radius:2px;background:#B4432F;opacity:.6}
+.aside-card .al li b{color:#26231D}
+.var-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#5E5850;padding:5px 0;border-bottom:1px dashed #EFEAE0}
+.var-row:last-child{border-bottom:none}
+.var-row .vdot{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.08);flex:0 0 auto}
+.var-row .vname{flex:1}
+.var-row .vhex{font-family:Consolas,monospace;font-size:11px;color:#9A5B3A}
+
+/* 手机框（复用现状预览结构，颜色全部变量化） */
+.phone-shell{width:414px;background:#15171A;border-radius:46px;padding:14px;box-shadow:0 24px 60px rgba(20,35,28,.28);border:1px solid #2A2E33}
+.screen{width:386px;height:840px;border-radius:34px;overflow:hidden;position:relative;background:var(--pageBg);display:flex;flex-direction:column;transition:background .3s}
+.sb{height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:60}
+.sb-time{font-size:14px;font-weight:600;color:var(--heading)}
+.sb-icons{display:flex;gap:5px;align-items:center}
+.sb-icons svg{display:block}
+.sb-icons .ic{fill:var(--heading)}
+.view{flex:1 1 auto;position:relative;overflow:hidden;display:none}
+.view.active{display:block}
+.tabbar{height:78px;flex:0 0 78px;background:var(--cardBg);backdrop-filter:blur(14px);border-top:.5px solid var(--divider);display:flex;align-items:flex-start;padding-top:8px;z-index:70}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;font-family:inherit}
+.tab-item .ti-label{font-size:11px;font-weight:500}
+.tab-item.active .ti-label{color:var(--primary)}
+.tab-item:not(.active) .ti-label{color:var(--caption)}
+.tab-item.active .tibg{color:var(--primary)}
+.tab-item:not(.active) .tibg{color:var(--caption)}
+.map-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.map-poi{font-size:10.5px;fill:#7A8086;font-weight:500}
+.map-poi-sm{font-size:9px;fill:#98A0A6}
+.status-wrap{position:absolute;top:12px;left:16px;right:16px;z-index:55;pointer-events:none}
+.status-pill{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:999px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid;font-size:13px;font-weight:600;text-align:center;cursor:pointer}
+.status-pill--info{background:var(--cardBg);border-color:var(--cardBorder);color:var(--heading);backdrop-filter:blur(10px)}
+.status-pill--warn{background:var(--barWarn);border-color:rgba(0,0,0,.12);color:#fff}
+.status-pill--fair{background:var(--barFair);border-color:rgba(0,0,0,.1);color:var(--barFairText)}
+.status-pill--mock{background:var(--barMock);border-color:rgba(0,0,0,.12);color:var(--barMockText)}
+.fence-toggle,.recenter-btn{position:absolute;z-index:54;width:40px;height:40px;border-radius:20px;background:var(--cardBg);backdrop-filter:blur(10px);border:.5px solid var(--cardBorder);box-shadow:0 2px 12px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)}
+.fence-toggle{top:66px;right:16px}
+.recenter-btn{right:16px;bottom:20px;width:44px;height:44px;border-radius:22px}
+.attrib{position:absolute;left:10px;bottom:16px;z-index:40;font-size:9.5px;color:#9AA0A6}
+.trigger-card{position:absolute;top:66px;left:16px;right:16px;z-index:95;background:var(--darkPanel);border-radius:16px;padding:10px 12px;display:flex;align-items:center;border:1px solid rgba(255,255,255,.15);box-shadow:0 4px 16px rgba(0,0,0,.08);color:#fff}
+.trigger-card .tc-info{flex:1;margin-right:12px;min-width:0}
+.trigger-card .tc-tag{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px}
+.trigger-card .tc-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trigger-card .tc-stop{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:none;color:#fff;font-family:inherit}
+.debug-panel{position:absolute;left:16px;right:16px;bottom:14px;z-index:93;background:var(--darkPanel);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.15)}
+.debug-head{width:100%;padding:8px 12px;font-size:12px;font-weight:600;color:#fff;background:none;border:none;text-align:left;font-family:inherit}
+.debug-body{padding:2px 12px 12px}
+.debug-row{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:2px 0}
+.debug-row .dl{flex:0 0 64px;color:rgba(255,255,255,.55)}
+.debug-row .dv{flex:1;color:#fff;word-break:break-all}
+.list-scroll{position:absolute;inset:0;overflow-y:auto;background:var(--pageBg);padding-bottom:40px}
+.syncbar{margin:12px 16px 0;padding:12px;border-radius:12px;background:var(--barWarn)}
+.syncbar p{font-size:13px;color:#fff;font-weight:500;line-height:19px}
+.acc-header{display:flex;align-items:center;margin:12px 16px 0;padding:12px 16px;border-radius:12px;background:var(--cardBg);backdrop-filter:blur(10px);border-left:4px solid;border-top:1px solid var(--cardBorder);border-right:1px solid var(--cardBorder);border-bottom:1px solid var(--cardBorder);cursor:pointer;user-select:none;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.acc-header .ah-text{flex:1;font-size:15px;font-weight:700;color:var(--heading)}
+.acc-header .ah-arrow{font-size:12px;color:var(--caption);transition:transform .18s ease}
+.acc-header.open .ah-arrow{transform:rotate(90deg)}
+.spot-row{display:flex;align-items:stretch;margin-left:16px}
+.spot-dot{width:4px;margin-right:12px;flex:0 0 auto}
+.spot-card{flex:1;display:flex;flex-direction:row;background:var(--cardBg);backdrop-filter:blur(10px);border-radius:16px;margin:8px 16px 8px 0;overflow:hidden;border:1px solid var(--cardBorder);box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:pointer}
+.spot-card .sc-img{width:100px;height:100px;object-fit:cover;background:var(--divider)}
+.spot-card .sc-stripe{width:4px;background:var(--primary);margin-right:12px;flex:0 0 auto}
+.spot-card .sc-body{flex:1;padding:16px 16px 16px 0;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.sc-name{font-size:16px;font-weight:700;color:var(--heading);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-summary{font-size:13px;color:var(--body);margin-top:4px;line-height:19px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dist-pill{align-self:flex-start;margin-top:8px;padding:3px 10px;border-radius:999px;background:var(--distanceBg);font-size:12px;font-weight:600;color:var(--primary)}
+.detail-scroll{position:absolute;inset:0;overflow-y:auto;background:var(--pageBg)}
+.detail-header{position:sticky;top:0;z-index:20;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--pageBg)}
+.detail-header .dh-back{width:34px;height:34px;border:none;background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)}
+.detail-header .dh-title{font-size:17px;font-weight:600;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.detail-hero{width:100%;height:260px;object-fit:cover;background:var(--divider);display:block}
+.detail-body{padding:16px 16px 32px}
+.dp-pill{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:8px 16px;background:var(--cardBg);border-radius:999px;border:1px solid var(--cardBorder);box-shadow:0 2px 12px rgba(0,0,0,.06);font-size:14px;font-weight:500;color:var(--primary)}
+.dp-pill .dp-dot{width:8px;height:8px;border-radius:4px;background:var(--primary)}
+.detail-name{font-size:24px;font-weight:700;color:var(--heading);letter-spacing:-.4px;margin-bottom:16px}
+.sec{margin-top:20px}
+.sec-label{font-size:12px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.sec-summary{font-size:16px;color:var(--body);line-height:26px;font-weight:500}
+.sec-text{font-size:15px;color:var(--body);line-height:25px;margin-top:4px}
+.play-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;padding:14px;border-radius:12px;border:1.5px solid var(--primary);background:var(--primarySoft);font-size:15px;font-weight:600;color:var(--primaryDeep);cursor:pointer;width:100%;font-family:inherit}
+.play-btn.active{background:var(--primaryDeep);color:#fff}
+/* 地图围栏与 Marker（变量化，主题切换即时重着色） */
+.fence-circle,.fence-poly{fill:var(--fenceFill);stroke:var(--fenceStroke)}
+.fence-corr{stroke:var(--fenceStroke)}
+.map-marker path{fill:var(--marker)}
+.user-dot{fill:var(--fenceFill);stroke:#fff}
+.user-core{fill:var(--primary)}
+
+/* Token 对照表 */
+.token-table-wrap{overflow-x:auto;background:#fff;border:1px solid #E7E2D8;border-radius:16px;box-shadow:0 3px 12px rgba(60,50,30,.05)}
+table.tokens{width:100%;border-collapse:collapse;min-width:760px;font-size:12.5px}
+table.tokens th,table.tokens td{padding:9px 14px;text-align:left;border-bottom:1px solid #F0ECE2;white-space:nowrap}
+table.tokens thead th{background:#26231D;color:#fff;font-weight:600;font-size:12px;position:sticky;top:0}
+table.tokens thead th:first-child{border-radius:16px 0 0 0}
+table.tokens td:first-child{font-weight:600;color:#26231D}
+table.tokens tbody tr:hover{background:#FAF7F0}
+table.tokens .hex{display:inline-flex;align-items:center;gap:7px;font-family:Consolas,monospace;font-size:11.5px;color:#6B655A}
+table.tokens .hex i{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.1);display:inline-block}
+table.tokens .hl{background:#F7F0E4}
+table.tokens td.hl{font-weight:700;color:#9A5B3A}
+.th-note{font-size:11px;color:#8A867C;font-weight:400;margin-left:6px}
+
+/* 落地路径 */
+.path-list{background:#fff;border:1px solid #E7E2D8;border-radius:16px;padding:20px 22px;list-style:none;counter-reset:pl;display:flex;flex-direction:column;gap:12px}
+.path-list li{counter-increment:pl;padding-left:40px;position:relative;font-size:13.5px;color:#4A463D;line-height:1.7}
+.path-list li::before{content:counter(pl);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:8px;background:#26231D;color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.path-list li b{color:#26231D}
+.path-list li code{background:#F4F1EA;border:1px solid #E7E2D8;border-radius:4px;padding:1px 6px;font-size:12px;color:#9A5B3A}
+.path-warn{margin-top:12px;font-size:12.5px;color:#8A867C;background:#F7F4EE;border:1px dashed #DFD8C8;border-radius:10px;padding:10px 14px}
+
+/* 页脚 */
+.footnote{max-width:1180px;margin:0 auto;padding:0 24px 44px;font-size:12px;color:#8A867C;line-height:1.9}
+.footnote b{color:#5E5850}
+
+/* 响应式 */
+@media (max-width:1080px){
+  .diag-grid{grid-template-columns:1fr 1fr}
+  .schemes{grid-template-columns:1fr}
+  .preview-flex{flex-direction:column;align-items:center}
+  .aside{max-width:414px;width:100%}
+  .phone-shell{width:min(414px,94vw)}
+  .screen{width:100%;height:min(840px,150vw)}
+}
+@media (max-width:640px){
+  .diag-grid{grid-template-columns:1fr}
+  .page-head h1{font-size:24px}
+  h2.sec{font-size:22px}
+  .wrap{padding:0 16px}
+  .preview-stage{padding:18px 14px}
+  .ctlbar{gap:8px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 头部 ===== -->
+<header class="page-head">
+  <div class="wrap">
+    <div class="kicker">DESIGN PROPOSAL · 郑大五十步</div>
+    <h1>视觉配色优化提案</h1>
+    <div class="sub">三套方向（稳妥进化 / 文化重铸 / 年轻活力），均以真实界面实时预览呈现；全部颜色集中在 theme.ts，实施成本低。本提案为独立文件，未修改项目任何源码。</div>
+    <div class="meta">
+      <span class="meta-tag">现状 V5.6 玻璃拟态</span>
+      <span class="meta-tag">方案 A / B / C 一键切换预览</span>
+      <span class="meta-tag">含 WCAG 对比度复核</span>
+      <span class="meta-tag">独立 HTML，未动 app/ 代码</span>
+    </div>
+  </div>
+</header>
+
+<!-- ===== 一、现状诊断 ===== -->
+<section style="padding:34px 0 6px">
+  <div class="wrap">
+    <div class="kicker">01 · 为什么需要动颜色</div>
+    <h2 class="sec">现状诊断</h2>
+    <p class="sec-sub">基于 theme.ts 与三个页面真实样式逐项核对，共 6 条。</p>
+    <div class="diag-grid">
+      <div class="diag"><div class="d-no">D1</div><div class="d-t">色彩双族并立</div><div class="d-x">品牌只用单一绿 <code>#1A7A5A</code>，而六分类是另一组彩虹色（深红/绿/棕/青/紫/黄），界面同时出现 8+ 色相，两组颜色缺乏共同血缘。</div></div>
+      <div class="diag"><div class="d-no">D2</div><div class="d-t">品牌绿辨识度一般</div><div class="d-x">接近“通用成功绿”，与郑大 / 中原文化叙事（天地之中、眉湖八景、青铜器）绑定弱，换任何校园 App 都成立。</div></div>
+      <div class="diag"><div class="d-no">D3</div><div class="d-t">底色偏冷</div><div class="d-x">冷灰 <code>#F2F4F6</code> + 88% 白卡通透但暖度低，与校园湖光、银杏、红砖等真实场景的气质略有温差。</div></div>
+      <div class="diag"><div class="d-no">D4</div><div class="d-t">地图首屏色相冲突</div><div class="d-x">打开 App 第一屏就是地图，但高德默认蓝 Marker <code>#1B9CFC</code> 与品牌绿打架，首屏即违和。</div></div>
+      <div class="diag"><div class="d-no">D5</div><div class="d-t">次要文字对比不足</div><div class="d-x">caption <code>#999</code> 在白卡上约 <b>2.6:1</b>，未达 WCAG AA（4.5:1）；距离胶囊的小绿字、时间戳等易读吃力。</div></div>
+      <div class="diag"><div class="d-no">D6</div><div class="d-t">状态条文字对比不均</div><div class="d-x">棕 / 黄底上的白字约 3.3:1 勉强可读；三套方案均改深字或加深底色解决。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 二、三套方案 ===== -->
+<section style="padding:30px 0 8px">
+  <div class="wrap">
+    <div class="kicker">02 · 三套方向</div>
+    <h2 class="sec">选一套，点「应用」即可在下方手机上实时看效果</h2>
+    <p class="sec-sub">A 稳妥进化 · B 文化重铸 · C 年轻活力 —— 三条互斥路线，建议先看效果再定。</p>
+    <div class="schemes">
+
+      <!-- 方案 A -->
+      <div class="scheme" data-theme-key="a">
+        <div class="s-top" style="background:#14594C">
+          <div class="s-name">方案 A · 青黛山水</div>
+          <div class="s-tag">稳妥进化 · 最小风险</div>
+        </div>
+        <div class="cat-strip" style="margin-top:14px">
+          <span class="cs" style="background:#3B5B6E"></span><span class="cs" style="background:#4F7A52"></span><span class="cs" style="background:#8A5A33"></span><span class="cs" style="background:#2F7A7A"></span><span class="cs" style="background:#7A5C7E"></span><span class="cs" style="background:#B08A2E"></span>
+        </div>
+        <div class="s-strip">
+          <div class="ss"><div class="sw" style="background:#14594C"></div><div class="swl">主色</div></div>
+          <div class="ss"><div class="sw" style="background:#B9753F"></div><div class="swl">强调</div></div>
+          <div class="ss"><div class="sw" style="background:#F6F4EF"></div><div class="swl">底色</div></div>
+          <div class="ss"><div class="sw" style="background:#E3F0EB"></div><div class="swl">浅绿底</div></div>
+          <div class="ss"><div class="sw" style="background:#2F7D68"></div><div class="swl">Marker</div></div>
+        </div>
+        <div class="s-body">
+          <p class="s-idea">把现有绿做深做暖，让所有颜色“长在同一棵树上”：主色加深近 40%，底色冷灰换成宣纸米，六分类色统一为低饱和同明度，去彩虹感。品牌延续性最好，改动最平滑。</p>
+          <ul class="s-changes">
+            <li>主色 <b>#1A7A5A → #14594C</b>（更深更稳），浅绿底、距离胶囊同步换族</li>
+            <li>页面底色 <b>#F2F4F6 → #F6F4EF</b> 宣纸米，白卡加暖 88% 半透明不变</li>
+            <li>六分类色 → 黛蓝 / 苔绿 / 赭石 / 墨青 / 藕紫 / 麦金（同明度低饱和）</li>
+            <li>地图 Marker <b>高德蓝 → 主色系 #2F7D68</b>，首屏与品牌一致</li>
+            <li>状态条棕 / 黄底改深字，消除 3.3:1 的边缘对比</li>
+          </ul>
+          <div class="s-read">可读性：caption 对比度 <b>2.58 → 3.17:1</b>；主色白字 <b>8.19:1</b>（AA 达标）。</div>
+          <div class="s-pros"><span>品牌延续</span><span>改动最小</span><span>更耐看</span><span>适合先上</span></div>
+        </div>
+        <button class="s-apply" data-apply="a">应用方案 A 到预览</button>
+      </div>
+
+      <!-- 方案 B -->
+      <div class="scheme" data-theme-key="b">
+        <div class="s-top" style="background:#2F5E55">
+          <div class="s-name">方案 B · 青铜 · 天地之中</div>
+          <div class="s-tag">文化重铸 · 高辨识度</div>
+        </div>
+        <div class="cat-strip" style="margin-top:14px">
+          <span class="cs" style="background:#33505C"></span><span class="cs" style="background:#4E7A5E"></span><span class="cs" style="background:#9A5B3A"></span><span class="cs" style="background:#3F6B78"></span><span class="cs" style="background:#6E5A72"></span><span class="cs" style="background:#C0952E"></span>
+        </div>
+        <div class="s-strip">
+          <div class="ss"><div class="sw" style="background:#2F5E55"></div><div class="swl">青铜绿</div></div>
+          <div class="ss"><div class="sw" style="background:#B4432F"></div><div class="swl">朱砂</div></div>
+          <div class="ss"><div class="sw" style="background:#F5F1E7"></div><div class="swl">宣纸底</div></div>
+          <div class="ss"><div class="sw" style="background:#E4EFEA"></div><div class="swl">浅青底</div></div>
+          <div class="ss"><div class="sw" style="background:#B4432F"></div><div class="swl">Marker</div></div>
+        </div>
+        <div class="s-body">
+          <p class="s-idea">呼应“天地之中”（登封世界遗产语境）与眉湖八景的青铜叙事（问鼎 · 乳钉纹铜方鼎 · 商都 3600 年）：青铜绿 × 朱砂 × 宣纸，书院 / 博物馆气质，与同类校园 App 拉开差距。</p>
+          <ul class="s-changes">
+            <li>主色 <b>→ 青铜绿 #2F5E55</b>；强调 <b>→ 朱砂 #B4432F</b></li>
+            <li>底色 <b>→ 宣纸 #F5F1E7</b>，白卡换暖纸白 90%</li>
+            <li>六分类色 → 玄青 / 青铜绿 / 赤陶 / 黛青 / 烟紫 / 鎏金（青铜纹样语系）</li>
+            <li>地图 Marker <b>→ 朱砂 #B4432F</b>：第一屏最醒目的品牌点</li>
+            <li>深色浮层换玄黑 rgba(30,28,24,.94)，暖得更统一</li>
+          </ul>
+          <div class="s-read">可读性：caption <b>3.21:1</b>；朱砂底白字 <b>5.55:1</b>；鎏金底深字 5.65:1。</div>
+          <div class="s-pros"><span>辨识度最高</span><span>有故事</span><span>内容契合</span><span>适合差异化</span></div>
+        </div>
+        <button class="s-apply" data-apply="b">应用方案 B 到预览</button>
+      </div>
+
+      <!-- 方案 C -->
+      <div class="scheme" data-theme-key="c">
+        <div class="s-top" style="background:#0E8A62">
+          <div class="s-name">方案 C · 银杏 · 青春</div>
+          <div class="s-tag">年轻活力 · 社媒友好</div>
+        </div>
+        <div class="cat-strip" style="margin-top:14px">
+          <span class="cs" style="background:#C43D4E"></span><span class="cs" style="background:#1FA268"></span><span class="cs" style="background:#C77B3D"></span><span class="cs" style="background:#1B9AAA"></span><span class="cs" style="background:#7C5CBF"></span><span class="cs" style="background:#EE7CA0"></span>
+        </div>
+        <div class="s-strip">
+          <div class="ss"><div class="sw" style="background:#12A879"></div><div class="swl">主色</div></div>
+          <div class="ss"><div class="sw" style="background:#0E8A62"></div><div class="swl">深一档</div></div>
+          <div class="ss"><div class="sw" style="background:#F2A93B"></div><div class="swl">银杏金</div></div>
+          <div class="ss"><div class="sw" style="background:#F7F9F8"></div><div class="swl">底色</div></div>
+          <div class="ss"><div class="sw" style="background:#12A879"></div><div class="swl">Marker</div></div>
+        </div>
+        <div class="s-body">
+          <p class="s-idea">樱花林、银杏大道是郑大出圈的打卡点。面向学生的高饱和青绿 × 银杏金 × 清爽近白：明快、拍照友好、适合社媒传播，界面整体“轻”一档。</p>
+          <ul class="s-changes">
+            <li>主色 <b>→ 明翠绿 #12A879</b>，强调 <b>→ 银杏金 #F2A93B</b></li>
+            <li>底色 <b>→ 近白 #F7F9F8</b>，白卡升到 92%</li>
+            <li>六分类色 → 莓果 / 翠绿 / 焦糖 / 天青 / 蓝紫 / 樱粉（高饱和同明度）</li>
+            <li>地图 Marker、围栏同步翠绿系</li>
+            <li><b>绿字与实心按钮用深一档 #0E8A62</b>（#12A879 小字仅 3.04:1，不达标）</li>
+          </ul>
+          <div class="s-read">可读性：caption <b>4.14:1</b>（三案最高）；深绿底白字 4.35:1；金色深字 6.66:1。</div>
+          <div class="s-pros"><span>最年轻</span><span>拍照友好</span><span>适合传播</span><span>观感最亮</span></div>
+        </div>
+        <button class="s-apply" data-apply="c">应用方案 C 到预览</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== 三、实时预览 ===== -->
+<section style="padding:30px 0 8px">
+  <div class="wrap">
+    <div class="kicker">03 · 实时对比</div>
+    <h2 class="sec">同一界面，四套皮肤</h2>
+    <p class="sec-sub">点主题切换整套配色；地图 / 列表 / 详情可分别查看。图中地图为示意绘制（真实为高德原生地图），围栏、Marker、状态条、卡片均为变量化渲染。</p>
+    <div class="preview-stage">
+      <div class="ctlbar">
+        <div class="ctl-group">
+          <span class="ctl-label">主题</span>
+          <button class="ctl-btn on" data-theme-btn="now">现状 V5.6</button>
+          <button class="ctl-btn" data-theme-btn="a">A 青黛山水</button>
+          <button class="ctl-btn" data-theme-btn="b">B 青铜</button>
+          <button class="ctl-btn" data-theme-btn="c">C 银杏</button>
+        </div>
+        <div class="ctl-group">
+          <span class="ctl-label">页面</span>
+          <button class="ctl-btn on" data-screen="map">地图</button>
+          <button class="ctl-btn" data-screen="list">列表</button>
+          <button class="ctl-btn" data-screen="detail">详情</button>
+        </div>
+        <div class="ctl-group">
+          <button class="ctl-btn--demo" data-demo="status">循环状态条</button>
+          <button class="ctl-btn--demo" data-demo="fence">围栏开关</button>
+          <button class="ctl-btn--demo" data-demo="trigger">触发浮层</button>
+        </div>
+      </div>
+
+      <div class="preview-flex">
+        <div class="phone-side">
+          <div class="phone-shell">
+            <div class="screen" id="screen">
+              <div class="sb">
+                <span class="sb-time">9:41</span>
+                <span class="sb-icons">
+                  <svg width="17" height="12" viewBox="0 0 17 12"><path class="ic" d="M1 4h2v5H1zM4.5 2h2v7h-2zM8 0h2v9H8zM11.5 3h2v6h-2z"/><rect x="13" y="5" width="3" height="6" rx="1.5" class="ic" opacity=".35"/></svg>
+                  <svg width="16" height="12" viewBox="0 0 16 12"><path class="ic" d="M8 8.6a4.2 4.2 0 100-8.4 4.2 4.2 0 000 8.4zM8 11a7 7 0 01-4.9-2l1.3-1.3A5.2 5.2 0 008 9.2c1.4 0 2.7.6 3.6 1.5L8.1 12l-.1-1z"/></svg>
+                  <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" class="ic" opacity=".4"/><rect x="2" y="2" width="15" height="8" rx="1.5" class="ic"/><rect x="23" y="4" width="2" height="4" rx="1" class="ic" opacity=".4"/></svg>
+                </span>
+              </div>
+
+              <div class="view active" id="viewMap">
+                <svg class="map-svg" viewBox="0 0 390 726" preserveAspectRatio="xMidYMid slice">
+                  <defs>
+                    <pattern id="bld" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="#EFEDE7"/><rect x="0" y="0" width="13" height="13" fill="#EBE9E2"/></pattern>
+                    <linearGradient id="lake" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D8EAE3"/><stop offset="1" stop-color="#CBE2D8"/></linearGradient>
+                    <linearGradient id="park" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DFEBD6"/><stop offset="1" stop-color="#D3E3C9"/></linearGradient>
+                  </defs>
+                  <rect width="390" height="726" fill="#F6F4EF"/>
+                  <ellipse cx="196" cy="168" rx="86" ry="74" fill="url(#park)"/>
+                  <ellipse cx="196" cy="168" rx="86" ry="74" fill="none" stroke="#CBDCB8" stroke-width="1"/>
+                  <ellipse cx="188" cy="486" rx="52" ry="34" fill="url(#park)"/>
+                  <ellipse cx="300" cy="300" rx="34" ry="26" fill="url(#park)"/>
+                  <ellipse cx="150" cy="430" rx="30" ry="20" fill="url(#park)"/>
+                  <path d="M128 352 C122 336 130 322 146 316 C168 308 196 306 216 312 C236 318 248 330 246 344 C244 358 232 368 214 372 C196 376 172 376 154 370 C138 365 132 364 128 352 Z" fill="url(#lake)" stroke="#B7D4C6" stroke-width="1.2"/>
+                  <path d="M158 336 C170 330 196 328 212 334" stroke="#CFE6DC" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+                  <g stroke="#FFFFFF" stroke-width="11" stroke-linecap="round">
+                    <path d="M100 90 V660"/><path d="M187 90 V660"/><path d="M244 90 V660"/><path d="M300 90 V660"/>
+                    <path d="M70 120 H345"/><path d="M70 300 H345"/><path d="M70 407 H345"/><path d="M70 500 H345"/><path d="M70 626 H345"/>
+                  </g>
+                  <g stroke="#E3E0D8" stroke-width="1" fill="none">
+                    <path d="M100 90 V660"/><path d="M187 90 V660"/><path d="M244 90 V660"/><path d="M300 90 V660"/>
+                    <path d="M70 120 H345"/><path d="M70 300 H345"/><path d="M70 407 H345"/><path d="M70 500 H345"/><path d="M70 626 H345"/>
+                  </g>
+                  <g fill="url(#bld)" stroke="#D8D4CA" stroke-width=".8">
+                    <rect x="110" y="135" width="60" height="48" rx="3"/><rect x="256" y="135" width="38" height="48" rx="3"/>
+                    <rect x="258" y="320" width="36" height="66" rx="3"/><rect x="110" y="325" width="62" height="58" rx="3"/>
+                    <rect x="196" y="315" width="40" height="40" rx="3"/><rect x="252" y="418" width="42" height="66" rx="3"/>
+                    <rect x="108" y="420" width="66" height="62" rx="3"/><rect x="252" y="515" width="42" height="94" rx="3"/>
+                    <rect x="108" y="515" width="66" height="94" rx="3"/><rect x="306" y="412" width="30" height="180" rx="3"/>
+                    <rect x="70" y="130" width="20" height="460" rx="3" opacity=".55"/><rect x="312" y="130" width="26" height="120" rx="3" opacity=".55"/>
+                    <rect x="120" y="638" width="160" height="18" rx="3" opacity=".4"/><rect x="110" y="100" width="70" height="14" rx="3" opacity=".45"/>
+                  </g>
+                  <g transform="translate(196,636)"><circle r="14" fill="#EFE9DB" stroke="#D9D2C2"/><path d="M0 -6 L1.7 -2 L6 -2 L2.6 1 L3.8 5 L0 3 L-3.8 5 L-2.6 1 L-6 -2 L-1.7 -2 Z" fill="#C9A227"/></g>
+                  <text class="map-poi" x="196" y="140">厚山</text>
+                  <text class="map-poi" x="176" y="352">眉湖</text>
+                  <text class="map-poi" x="160" y="486">樱花林</text>
+                  <text class="map-poi" x="262" y="352">钟楼</text>
+                  <text class="map-poi" x="288" y="392">图书馆</text>
+                  <text class="map-poi" x="300" y="508">校医院</text>
+                  <text class="map-poi" x="210" y="600">南核心教学区</text>
+                  <text class="map-poi" x="118" y="370">本源体育场</text>
+                  <text class="map-poi-sm" x="120" y="508">柳园</text>
+                  <text class="map-poi-sm" x="196" y="455">校园商业街</text>
+                  <text class="map-poi-sm" x="244" y="292">北核心教学区</text>
+                  <text class="map-poi-sm" x="196" y="668">南大门</text>
+                  <g id="mapOverlay"></g>
+                </svg>
+                <div class="status-wrap" id="mapStatus"></div>
+                <button class="fence-toggle" id="fenceToggle">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>
+                </button>
+                <button class="recenter-btn" id="recenterBtn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                </button>
+                <div class="attrib">© 高德地图（示意）</div>
+                <div class="debug-panel">
+                  <div class="debug-head">调试面板 ▸（preview 构建专属）</div>
+                </div>
+                <div id="triggerCard"></div>
+              </div>
+
+              <div class="view" id="viewList"><div class="list-scroll" id="listScroll"></div></div>
+              <div class="view" id="viewDetail"><div class="detail-scroll" id="detailScroll"></div></div>
+
+              <div class="tabbar">
+                <button class="tab-item active" data-tab="map">
+                  <svg class="tibg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3.5 6.5v13L9 17l6 3 5.5-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/></svg>
+                  <span class="ti-label">地图</span>
+                </button>
+                <button class="tab-item" data-tab="list">
+                  <svg class="tibg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>
+                  <span class="ti-label">景点</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-caption" id="phoneCaption"></div>
+        </div>
+
+        <div class="aside">
+          <div class="aside-card">
+            <h4>当前主题核心变量</h4>
+            <div id="varBox"></div>
+          </div>
+          <div class="aside-card">
+            <h4>这个方案建议怎么看</h4>
+            <ul class="al" id="howToRead"></ul>
+          </div>
+          <div class="aside-card">
+            <h4>可读性复核（WCAG 相对亮度计算）</h4>
+            <ul class="al" id="readBox"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 四、Token 对照表 ===== -->
+<section style="padding:30px 0 8px">
+  <div class="wrap">
+    <div class="kicker">04 · Token 级对照</div>
+    <h2 class="sec">现状 → 三案：逐项替换值</h2>
+    <p class="sec-sub">实施时只改 constants/theme.ts 一个文件（Marker / 围栏色在 map.tsx 两个常量）。高亮列为该方案需要特别注意的新增项。</p>
+    <div class="token-table-wrap">
+      <table class="tokens">
+        <thead>
+          <tr><th>令牌 / 用途</th><th>现状 V5.6</th><th>A 青黛山水</th><th>B 青铜 · 天地之中</th><th>C 银杏 · 青春</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>主色 primary <span class="th-note">品牌 / 激活 / 图标</span></td><td><span class="hex"><i style="background:#1A7A5A"></i>#1A7A5A</span></td><td><span class="hex"><i style="background:#14594C"></i>#14594C</span></td><td><span class="hex"><i style="background:#2F5E55"></i>#2F5E55</span></td><td><span class="hex"><i style="background:#12A879"></i>#12A879</span></td></tr>
+          <tr><td>主色深 primaryDeep <span class="th-note">实心按钮 / 绿色小字</span></td><td><span class="hex"><i style="background:#1A7A5A"></i>＝主色</span></td><td><span class="hex"><i style="background:#14594C"></i>＝主色</span></td><td><span class="hex"><i style="background:#2F5E55"></i>＝主色</span></td><td class="hl"><span class="hex"><i style="background:#0E8A62"></i>#0E8A62</span></td></tr>
+          <tr><td>浅绿底 primarySoft</td><td><span class="hex"><i style="background:#E8F5F0"></i>#E8F5F0</span></td><td><span class="hex"><i style="background:#E3F0EB"></i>#E3F0EB</span></td><td><span class="hex"><i style="background:#E4EFEA"></i>#E4EFEA</span></td><td><span class="hex"><i style="background:#E0F7EF"></i>#E0F7EF</span></td></tr>
+          <tr><td>强调色 accent <span class="th-note">触发卡标签 / 状态条</span></td><td><span class="hex"><i style="background:#C67B4B"></i>#C67B4B</span></td><td><span class="hex"><i style="background:#B9753F"></i>#B9753F</span></td><td><span class="hex"><i style="background:#B4432F"></i>#B4432F</span></td><td><span class="hex"><i style="background:#F2A93B"></i>#F2A93B</span></td></tr>
+          <tr><td>页面底色 pageBg</td><td><span class="hex"><i style="background:#F2F4F6"></i>#F2F4F6</span></td><td><span class="hex"><i style="background:#F6F4EF"></i>#F6F4EF</span></td><td><span class="hex"><i style="background:#F5F1E7"></i>#F5F1E7</span></td><td><span class="hex"><i style="background:#F7F9F8"></i>#F7F9F8</span></td></tr>
+          <tr><td>标题 heading</td><td><span class="hex"><i style="background:#1A1A1A"></i>#1A1A1A</span></td><td><span class="hex"><i style="background:#1D1D1B"></i>#1D1D1B</span></td><td><span class="hex"><i style="background:#26231D"></i>#26231D</span></td><td><span class="hex"><i style="background:#15211C"></i>#15211C</span></td></tr>
+          <tr><td>正文 body</td><td><span class="hex"><i style="background:#4A4A4A"></i>#4A4A4A</span></td><td><span class="hex"><i style="background:#45453F"></i>#45453F</span></td><td><span class="hex"><i style="background:#4A463D"></i>#4A463D</span></td><td><span class="hex"><i style="background:#3D4A44"></i>#3D4A44</span></td></tr>
+          <tr><td>次要文字 caption <span class="th-note">对比度见上表</span></td><td><span class="hex"><i style="background:#999999"></i>#999999</span></td><td><span class="hex"><i style="background:#8A8A80"></i>#8A8A80</span></td><td><span class="hex"><i style="background:#8C8678"></i>#8C8678</span></td><td><span class="hex"><i style="background:#6E7C75"></i>#6E7C75</span></td></tr>
+          <tr><td>分隔线 divider</td><td><span class="hex"><i style="background:#EAEAEA"></i>#EAEAEA</span></td><td><span class="hex"><i style="background:#E7E4DC"></i>#E7E4DC</span></td><td><span class="hex"><i style="background:#E4DFD2"></i>#E4DFD2</span></td><td><span class="hex"><i style="background:#E8EDEA"></i>#E8EDEA</span></td></tr>
+          <tr><td>错误 / 警示 error</td><td><span class="hex"><i style="background:#D94A4A"></i>#D94A4A</span></td><td><span class="hex"><i style="background:#C23A3A"></i>#C23A3A</span></td><td><span class="hex"><i style="background:#C03A2E"></i>#C03A2E</span></td><td><span class="hex"><i style="background:#E5484D"></i>#E5484D</span></td></tr>
+          <tr><td>地图 Marker <span class="th-note">map.tsx 自定义视图</span></td><td><span class="hex"><i style="background:#1B9CFC"></i>#1B9CFC</span></td><td><span class="hex"><i style="background:#2F7D68"></i>#2F7D68</span></td><td><span class="hex"><i style="background:#B4432F"></i>#B4432F</span></td><td><span class="hex"><i style="background:#12A879"></i>#12A879</span></td></tr>
+          <tr><td>分类 · 学院</td><td><span class="hex"><i style="background:#8B1A2B"></i>#8B1A2B</span></td><td><span class="hex"><i style="background:#3B5B6E"></i>#3B5B6E</span></td><td><span class="hex"><i style="background:#33505C"></i>#33505C</span></td><td><span class="hex"><i style="background:#C43D4E"></i>#C43D4E</span></td></tr>
+          <tr><td>分类 · 自然景观</td><td><span class="hex"><i style="background:#2E7D32"></i>#2E7D32</span></td><td><span class="hex"><i style="background:#4F7A52"></i>#4F7A52</span></td><td><span class="hex"><i style="background:#4E7A5E"></i>#4E7A5E</span></td><td><span class="hex"><i style="background:#1FA268"></i>#1FA268</span></td></tr>
+          <tr><td>分类 · 特色建筑</td><td><span class="hex"><i style="background:#6D4C41"></i>#6D4C41</span></td><td><span class="hex"><i style="background:#8A5A33"></i>#8A5A33</span></td><td><span class="hex"><i style="background:#9A5B3A"></i>#9A5B3A</span></td><td><span class="hex"><i style="background:#C77B3D"></i>#C77B3D</span></td></tr>
+          <tr><td>分类 · 教学区</td><td><span class="hex"><i style="background:#00838F"></i>#00838F</span></td><td><span class="hex"><i style="background:#2F7A7A"></i>#2F7A7A</span></td><td><span class="hex"><i style="background:#3F6B78"></i>#3F6B78</span></td><td><span class="hex"><i style="background:#1B9AAA"></i>#1B9AAA</span></td></tr>
+          <tr><td>分类 · 生活服务</td><td><span class="hex"><i style="background:#7B1FA2"></i>#7B1FA2</span></td><td><span class="hex"><i style="background:#7A5C7E"></i>#7A5C7E</span></td><td><span class="hex"><i style="background:#6E5A72"></i>#6E5A72</span></td><td><span class="hex"><i style="background:#7C5CBF"></i>#7C5CBF</span></td></tr>
+          <tr><td>分类 · 人文景观</td><td><span class="hex"><i style="background:#F9A825"></i>#F9A825</span></td><td><span class="hex"><i style="background:#B08A2E"></i>#B08A2E</span></td><td><span class="hex"><i style="background:#C0952E"></i>#C0952E</span></td><td><span class="hex"><i style="background:#EE7CA0"></i>#EE7CA0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 五、落地路径 ===== -->
+<section style="padding:30px 0 10px">
+  <div class="wrap">
+    <div class="kicker">05 · 怎么落地</div>
+    <h2 class="sec">实施成本很低：颜色全部集中在一个文件</h2>
+    <p class="sec-sub">以下为正式实施时的路径（本次未执行任何改动）。</p>
+    <ol class="path-list">
+      <li>全部颜色集中在 <code>app/constants/theme.ts</code>：替换 <b>Color</b> 与 <b>CATEGORY_COLORS</b> 两个对象即可全局生效，组件代码零改动（组件全部引用 theme.ts）。</li>
+      <li>地图 Marker 与围栏色在 <code>app/app/(tabs)/map.tsx</code>：Marker 改为自定义视图（约 3–5 行），围栏色改 <b>CIRCLE_FILL / CIRCLE_STROKE</b> 两个常量。</li>
+      <li>若选方案 C，新增一档 <b>primaryDeep</b>（#0E8A62）：实心按钮 / 绿色小字使用，避免 3:1 边缘对比。</li>
+      <li>状态条文字统一改深字（棕 / 黄底），一处样式即可；caption 若想严格达标 AA，可用 #7A7A72 再深一档。</li>
+      <li>高德原生地图底图 / POI 颜色无法自定义，品牌表达靠 Marker / 围栏 / 浮层完成——这正是本提案把 Marker 纳入配色的原因。</li>
+    </ol>
+    <div class="path-warn">说明：本提案是独立 HTML（ui-redesign/index.html），未修改 app/ 目录下任何文件；你随时可以在预览页把四套皮肤来回切换再定方向。</div>
+  </div>
+</section>
+
+<footer class="footnote">
+  <div style="height:10px"></div>
+  配色提案页 · 基于项目真实源码（theme.ts V5.6 / map.tsx / list.tsx / spot/[id].tsx）与内置种子数据制作；对比度数值由 WCAG 相对亮度公式计算（<b>现状 caption 2.58:1 → A 3.17:1 → B 3.21:1 → C 4.14:1</b>，正文 / 白字等见方案卡）。地图为示意绘制，真实运行使用高德原生地图；图片 / 音频来自服务器同步。本页为独立文件，未改动任何项目代码。
+</footer>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+/* ===== 主题元信息 ===== */
+const THEMES={
+  now:{name:'现状 V5.6',tag:'当前线上配色',cap:'当前版本：自然绿 #1A7A5A + 冷灰底 + 高德蓝 Marker，作为对比基准。',
+    vars:[['primary','#1A7A5A','主色'],['accent','#C67B4B','强调'],['pageBg','#F2F4F6','底色'],['caption','#999999','次要文字'],['marker','#1B9CFC','地图Marker']],
+    how:['这是基准，重点看三套方案与它的差异','注意首屏 Marker 蓝与品牌绿的不协调','注意六分类“彩虹感”与次要文字对比度'],
+    read:'caption #999 / 白卡 2.58:1（未达 AA 4.5:1）<br>主色 #1A7A5A / 白 5.28:1 ✓<br>状态条棕底白字约 3.31:1（边缘）'},
+  a:{name:'方案 A · 青黛山水',tag:'稳妥进化 · 最小风险',cap:'主色加深近 40%、底色换宣纸米、六分类统一低饱和同明度。最平滑，适合“想变精致但不冒险”。',
+    vars:[['primary','#14594C','主色'],['accent','#B9753F','强调'],['pageBg','#F6F4EF','底色'],['caption','#8A8A80','次要文字'],['marker','#2F7D68','地图Marker']],
+    how:['列表页：六分类色是否比“彩虹感”更统一耐看','地图页：Marker 改主色系后首屏是否更顺','详情页：宣纸米底 + 深黛绿的“书卷感”'],
+    read:'caption 2.58 → 3.17:1（改善）<br>主色 #14594C / 白 8.19:1 ✓<br>陶土底深字 4.57:1 ✓'},
+  b:{name:'方案 B · 青铜 · 天地之中',tag:'文化重铸 · 高辨识度',cap:'青铜绿 × 朱砂 × 宣纸，呼应“天地之中”与眉湖八景青铜叙事。书院 / 博物馆气质，和同类校园 App 拉开差距。',
+    vars:[['primary','#2F5E55','青铜绿'],['accent','#B4432F','朱砂'],['pageBg','#F5F1E7','宣纸底'],['caption','#8C8678','次要文字'],['marker','#B4432F','地图Marker']],
+    how:['地图页：朱砂 Marker 是第一屏最醒目的品牌点','列表页：玄青 / 赤陶 / 鎏金等分类色的文化氛围','详情页：深字 + 宣纸底的厚重感是否过重'],
+    read:'caption 3.21:1（改善）<br>朱砂底白字 5.55:1 ✓<br>鎏金底深字 5.65:1 ✓'},
+  c:{name:'方案 C · 银杏 · 青春',tag:'年轻活力 · 社媒友好',cap:'高饱和青绿 × 银杏金 × 清爽近白，呼应樱花林 / 银杏大道打卡点。明快、拍照友好，界面整体“轻”一档。',
+    vars:[['primary','#12A879','主色'],['primaryDeep','#0E8A62','实心按钮/小字'],['accent','#F2A93B','银杏金'],['pageBg','#F7F9F8','底色'],['marker','#12A879','地图Marker']],
+    how:['列表页：高饱和分类色的活泼度是否讨喜','详情页：金色强调 + 近白底的清爽感','注意：绿字与实心按钮需用深一档 #0E8A62'],
+    read:'caption 4.14:1（三案最高）<br>翠绿 #12A879 小字仅 3.04:1 → 用 #0E8A62（4.35:1）<br>银杏底深字 6.66:1 ✓'},
+};
+
+/* ===== 分类 ===== */
+const CATS=[
+  {key:'college',label:'🏫 学院'},{key:'nature',label:'🌿 自然景观'},
+  {key:'architecture',label:'🏛 特色建筑'},{key:'teaching',label:'📚 教学区'},
+  {key:'service',label:'🍽 生活服务'},{key:'humanity',label:'📖 人文景观'},
+];
+
+/* ===== 景点数据（真实来源：constants/seedSpots.ts） ===== */
+const SPOTS=[
+  {id:1,name:'南大门',cat:'architecture',lat:34.808504,lng:113.535529,r:35,sum:'郑大主校区标志性主入口，中轴线起点。',desc:'郑州大学主校区标志性主入口，建筑设计大气规整，契合中原文化厚重特质，是新生入学报到、毕业生合影留念的核心打卡地，也是学校官方宣传与录取通知书上的视觉名片。承载着每一届郑大人的入学初心与毕业不舍，是校园集体记忆的标志性载体。',fence:'circle',onMap:true},
+  {id:2,name:'五星广场',cat:'humanity',lat:34.809571,lng:113.535547,r:80,sum:'南门入校后的首个核心广场，新生军训与升旗仪式举办地。',desc:'南门入校后的首个核心广场，地面设有五星标识，是新生军训、日常升旗仪式、校园大型集会的核心场地，仪式感十足。广场名融合中国传统文化“五行”与现代科技“五大行星”内涵，既蕴含嵩岳尚学的崇高精神，也寓意郑大学子崇尚科学、追求卓越。',fence:'circle',onMap:true},
+  {id:5,name:'南核心教学区',cat:'teaching',lat:34.815711,lng:113.535331,r:50,sum:'钟楼南侧的连片教学楼群，郑大日常教学的主战场。',desc:'钟楼南侧的连片教学楼群，包含多栋标准教学楼，承担文、理、工等多学科基础课程教学任务，教室配备完善的多媒体设备。是无数学子求学路上的核心记忆载体，见证了课堂学习与知识积累，是郑大“求是担当”校训在教学一线的核心实践阵地。2025年，郑州大学承办举行“中国国际大学生创新大赛”，南核心教学区作为主要答辩场所，迎来了全面升级。',onMap:true},
+  {id:6,name:'河源（眉湖八景）',cat:'nature',lat:34.815959,lng:113.534744,r:35,sum:'眉湖水系最南端起点，黄河文化主题景观。',desc:'眉湖水系最南端的起点景观，由涌泉池、浮雕壁和彩陶池底构成，常年有泉水涌出，是眉湖人文八景的开篇之作。核心致敬中原作为华夏文明发源地的底蕴：河南是仰韶文化核心分布区，郑州是仰韶彩陶艺术的重要出土区域，黄河孕育了中原文明。“河源”既象征黄河之水的文明起源，也寓意郑大扎根中原、传承黄河文化的办学初心。',fence:'circle',onMap:true},
+  {id:7,name:'问鼎（眉湖八景）',cat:'humanity',lat:34.8166,lng:113.5349,r:10,sum:'商代“乳钉纹铜方鼎”1:1复制品，中原青铜文化展示。',desc:'郑州是商代早期都城所在地，郑州商城是3600年前世界上规模最大的都城，此鼎是商代早期青铜文明的巅峰代表；同时呼应“问鼎中原”的历史典故，春秋诸侯争霸的核心就在中原大地，鼎既象征河南厚重的青铜文明，也寄寓郑大学子勇立潮头、敢为人先的志向。',audio:false},
+  {id:10,name:'太和柱',cat:'humanity',lat:34.8185,lng:113.5355,r:50,sum:'12米高青铜柱雕塑，飞龙盘绕，校园文化精神象征。',desc:'位于眉湖景观核心位置，12米高的青铜柱雕塑，飞龙盘绕柱身，顶部为蜡烛火苗造型，是眉湖的核心标志性雕塑。河南是华夏龙文化的核心发源地，火苗造型既象征教师红烛奉献精神，更寓意华夏文明薪火相传、生生不息。',fence:'circle',onMap:true},
+  {id:13,name:'凤台荷香（眉湖八景）',cat:'nature',lat:34.8206,lng:113.5361,r:33,sum:'取自清代郑州八景之一，水域种植荷花、芦苇、香蒲等水生植物，岸边设休憩小屋，夏季荷香四溢，是校园赏荷、静心的核心点位。',desc:'此景复刻清代郑州八景之一的“凤台荷香”，原址位于郑州市凤凰台村，是郑州本土经典历史景观；夏季荷香、书香、茶香交融，体现了自然与人文的和谐共生，是中原传统园林审美在校园景观中的经典呈现。'},
+  {id:15,name:'元和广场',cat:'humanity',lat:34.817137,lng:113.53714,r:45,sum:'钟楼所在的核心礼仪广场，跨年敲钟地标。',desc:'校园核心礼仪广场，钟楼坐落于此，“元和”寓意元气始生、和谐统一。每年元旦前夜的跨年敲钟活动在此举行，是郑大学子专属的“零点记忆”，与南大门“五星广场”相呼应，构成校园核心礼仪空间。'},
+  {id:16,name:'钟楼',cat:'architecture',lat:34.817137,lng:113.537314,r:25,sum:'郑大主校区核心地标，红砖外立面，楼体镌刻“求是担当”校训。',desc:'选址与设计深度呼应河南“天地之中”的历史地位——登封“天地之中”历史建筑群是世界文化遗产，郑州自古就是“天下之中”的核心区域；钟楼昭示郑大“居天下之中，为天下之学”的办学定位，元旦跨年钟声是校园最具仪式感的文化符号。',fence:'circle',onMap:true},
+  {id:18,name:'图书馆',cat:'architecture',lat:34.817023,lng:113.538741,r:60,sum:'亚洲高校单体面积最大的图书馆之一，郑大主校区核心地标之一。',desc:'馆内藏书海量，阅览区宽敞舒适，是全校学子自习、阅读、备考的首选圣地。建筑设计以“书山有路勤为径”为核心理念，日均人流量居全国高校前列，承载着无数学子的奋斗记忆，是郑大学风建设的核心阵地。',fence:'circle',onMap:true},
+  {id:19,name:'北核心教学区',cat:'teaching',lat:34.818705,lng:113.536533,r:50,sum:'钟楼北侧教学建筑群。',desc:'钟楼北侧的教学建筑群，以专业教学、基础实验课程为主，硬件设施齐全，是郑大学子日常上课、自主学习的核心区域。依托学校“双一流”建设学科打造，是郑州大学人才培养与科技创新的核心载体。',onMap:true},
+  {id:20,name:'厚山',cat:'nature',lat:34.822053,lng:113.5354,r:60,sum:'主校区唯一山体景观，山上植被茂密，设有步道、亭台、瀑布，登顶可俯瞰整个校园全景，是晨读、散步、放松身心的绝佳去处，也是校园北端的生态屏障。',desc:'山名取自《周易》“厚德载物”，呼应郑大“笃信仁厚”的精神内核；这座高20.79米的山体，由新校区建设时的建筑废料堆填而成，是绿色环保理念的生动实践；山上古树移植自河南嵩县，山水与眉湖相连，构成“山环水抱”的格局，契合中原传统山水审美。',fence:'circle',onMap:true},
+  {id:26,name:'樱花林',cat:'nature',lat:34.813669,lng:113.535238,r:50,sum:'春季樱花如云似霞，漫天纷飞，如云似霞，是郑州春季知名的赏花点位，也是校园最具浪漫氛围的景观之一。',desc:'樱花园不仅承载着郑大人的青春记忆，也成为学校与市民共享生态美景、传递校园文化的重要窗口，是郑州春季文旅的标志性打卡地之一。',fence:'poly',poly:[{lat:34.814374,lng:113.534023},{lat:34.813356,lng:113.534118},{lat:34.8132,lng:113.537169},{lat:34.813826,lng:113.537264},{lat:34.814432,lng:113.536287}],onMap:true},
+  {id:29,name:'本源体育场',cat:'architecture',lat:34.81715,lng:113.532176,r:155,sum:'郑大主校区最大标准体育场，校运会与大型活动举办地。',desc:'郑大主校区规模最大的标准体育场，设有标准跑道、足球场与观众席，承办校运动会、各类体育赛事、大型文体活动。名称有双重渊源：一是致敬郑大1976级校友胡葆森，他向母校捐赠1亿元设立“本源教育发展基金”，开创了河南高校校友大额捐赠的先河；二是“本源”取“正本清源、追本溯源”之意，既提醒学子不忘求学初心，更呼应河南作为华夏文明本源之地的历史定位，是中原文化根脉精神的具象化。',fence:'circle',onMap:true},
+  {id:36,name:'校医院',cat:'service',lat:34.826245,lng:113.538602,r:45,sum:'位于北门东侧，校园专属医疗机构。',desc:'位于主校区北门东侧、北操场附近，校园专属医疗服务机构，内设内科、外科、急诊、体检科等多个科室，承担师生日常就诊、健康体检与疫情防控等职能，是校园公共卫生安全与师生健康保障的核心阵地。',onMap:true},
+  {id:42,name:'校园商业街',cat:'service',lat:34.814282,lng:113.533863,r:50,sum:'荷园柳园之间，校园CBD，24小时便利店齐全。',desc:'位于荷园东侧，是郑大最繁华的商业核心区。涵盖超市、书店、餐饮、美妆、文具等各类商铺，全方位满足学子学习、生活、休闲需求，不仅是校园生活配套的核心组成部分，更是校园商业文化、青春社交的重要载体，是郑大校园生活不可或缺的一部分。',fence:'corr',poly:[{lat:34.815634,lng:113.53368},{lat:34.815185,lng:113.533682},{lat:34.814896,lng:113.533696},{lat:34.814662,lng:113.533741},{lat:34.814428,lng:113.533773},{lat:34.813334,lng:113.533782}],onMap:true},
+  {id:43,name:'生命科学学院',cat:'college',lat:34.815751,lng:113.538621,r:40,sum:'中国科学院院士、校长李蓬教授领衔，生物学一级博士点，ESI全球前1%。',desc:'生命科学学院前身为2001年成立的生物工程系，2013年更名。现有教职工150人，中国科学院院士李蓬教授任首席教授。拥有生物学一级博士点、博士后流动站，生物技术、生物工程、生物信息学、植物科学与技术4个本科专业。生物学与生物化学、分子生物学与遗传学等方向进入ESI全球前1%。设天健培英班，与新加坡国立大学等联合培养。科研成果转化突出：治疗肝纤维化药物ADN-9转让5000万元，获中国专利银奖。',onMap:true},
+  {id:44,name:'聚英园餐厅',cat:'service',lat:34.815751,lng:113.538621,r:30,sum:'柳园生活区三层食堂，承德餐厅与清真餐厅兼具，性价比高。',desc:'聚英园餐厅位于柳园宿舍区，共三层。一楼为大众餐厅，窗口丰富价格实惠；二楼分为承德餐厅和清真餐厅；三楼为同和昌食府适合聚餐。推荐：摇滚炒鸡、麻辣香锅、小鱼盖饭、螺蛳粉、大盘鸡、隆江猪脚饭。营业时间6:30-8:30/10:30-13:30/16:30-19:30。是郑大最受学生欢迎的食堂之一。'},
+  {id:46,name:'荷园一餐厅',cat:'service',lat:34.814017,lng:113.530565,r:45,sum:'荷园配套双层食堂，二楼网红餐厅匆匆那年。',desc:'一楼汇聚重庆小面、花甲粉、热干面等南北美食，早餐灌汤小笼包皮薄爆汁。二楼匆匆那年是校园网红餐厅，文艺装修高颜值打卡地。推荐螺蛳粉、瓦香鸡、鸭血粉丝汤、黑椒牛柳意面、鸡公煲。紧邻商业街，用餐后可逛。'},
+  {id:50,name:'物理学院',cat:'college',lat:34.814935,lng:113.539072,r:40,sum:'中科院院士领衔，物理学一级博士点，承建河南首个大科学装置中原之光。',desc:'物理学院前身为1956年霍秉权先生创办的物理系，2019年更名，与中原之光实验室一体化运行。拥有凝聚态物理国家重点学科、物理学一级博士点和博士后流动站。中科院院士2人，国家杰青等国家级人才20余人。物理学科ESI全球排名3.80‰。承建河南省首个大科学装置——超短超强激光平台中原之光（占地75亩）。设钱三强英才班、尚光菁英班。金刚石CVD工艺服务河南超硬材料千亿产业链。',onMap:true},
+  {id:51,name:'化学学院',cat:'college',lat:34.814399,lng:113.539248,r:40,sum:'国家双一流建设学科，ESI全球前0.1‰，中科院院士3人。',desc:'化学学院始建于1956年，是郑大最早建立的三个院系之一。中国科学院院士吴养洁、麦松威、常俊标3人领衔，国家级人才20余人。化学学科2017年入选国家双一流建设序列，2022年续选。ESI全球排名0.103‰（第26位），自然指数全球第28位。标志性成果：常俊标院士团队研发我国首个抗新冠口服药阿兹夫定，获中国专利金奖。共建抗病毒药物全国重点实验室、平原实验室。'},
+  {id:52,name:'计算机与人工智能学院',cat:'college',lat:34.816653,lng:113.535518,r:45,sum:'涵盖计算机科学与技术、软件工程、人工智能等本科专业，以及计算机科学与技术、软件工程、人工智能与高性能计算等硕士博士专业',desc:'计算机与人工智能学院成立于2019年，与软件学院、国家超级计算郑州中心合署一体化建设。前身可追溯至1956年，是河南省最早建设的计算机类专业。计算机科学ESI全球前1%（河南唯一）。拥有软件工程博士后流动站、3个博士点。加拿大工程院院士杨天若、国家杰青徐明亮等国家级人才40余人。超算中心嵩山超级计算机峰值世界前五国内第二。与中科曙光、超聚变等共建产学研融合体。',onMap:true},
+];
+
+const MOCK_USER={lat:34.8171,lng:113.5373};
+function hav(a,b){const R=6371000,toR=d=>d*Math.PI/180,dlat=toR(b.lat-a.lat),dlng=toR(b.lng-a.lng),s=Math.sin(dlat/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dlng/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
+function fmtDist(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km';}
+function fmtDist2(m){return m<1000?'约 '+Math.round(m)+'m':'约 '+(m/1000).toFixed(1)+'km';}
+const LNG0=113.529,LNG1=113.542,LAT0=34.807,LAT1=34.827,MPP=3.05;
+function proj(lat,lng){return{x:(lng-LNG0)/(LNG1-LNG0)*390,y:(LAT1-lat)/(LAT1-LAT0)*726};}
+
+const state={theme:(document.documentElement.getAttribute('data-theme')||'now'),tab:'map',expanded:new Set(['college']),statusIdx:1,fencesOn:true,detailId:null,prevTab:'list'};
+const STATUS=[
+  {k:'none'},{k:'syncing',cls:'info',txt:'⏳ 正在同步景点数据...'},
+  {k:'poor',cls:'warn',txt:'⚠ 定位精度不足（当前 85m，需 ≤50m），自动触发已暂停'},
+  {k:'fair',cls:'fair',txt:'◐ 定位精度一般（35m），可能偶发误触发'},
+  {k:'mock',cls:'mock'},
+];
+
+function render(){
+  $('viewMap').classList.toggle('active',state.tab==='map');
+  $('viewList').classList.toggle('active',state.tab==='list');
+  $('viewDetail').classList.toggle('active',state.tab==='detail');
+  document.querySelector('.tabbar').style.display=state.tab==='detail'?'none':'flex';
+  document.querySelectorAll('.tab-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  document.querySelectorAll('[data-screen]').forEach(b=>b.classList.toggle('on',b.dataset.screen===state.tab));
+  renderOverlay(); renderStatus(); renderList(); renderDetail(); renderAside();
+}
+function renderStatus(){
+  const wrap=$('mapStatus'); const s=STATUS[state.statusIdx];
+  if(s.k==='none'){wrap.innerHTML='';return;}
+  if(s.k==='mock'){
+    wrap.innerHTML='<div class="status-pill status-pill--mock">⚠️ 模拟定位中：'+MOCK_USER.lat.toFixed(5)+', '+MOCK_USER.lng.toFixed(5)+'（真实 GPS 已忽略）</div>';
+  }else{
+    wrap.innerHTML='<div class="status-pill status-pill--'+s.cls+'">'+s.txt+'</div>';
+  }
+}
+function renderOverlay(){
+  const g=$('mapOverlay'); if(!g) return; let h='';
+  if(state.fencesOn){
+    for(const s of SPOTS){
+      if(!s.fence) continue;
+      const p=proj(s.lat,s.lng);
+      if(s.fence==='circle'){
+        h+='<circle class="fence-circle" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+Math.max(6,s.r/MPP).toFixed(1)+'" stroke-width="1.5"/>';
+      }else{
+        const pts=s.poly.map(q=>{const pp=proj(q.lat,q.lng);return pp.x.toFixed(1)+','+pp.y.toFixed(1);}).join(' ');
+        h+=s.fence==='poly'
+          ?'<polygon class="fence-poly" points="'+pts+'" stroke-width="1.5"/>'
+          :'<polyline class="fence-corr" points="'+pts+'" stroke-width="2.5"/>';
+      }
+    }
+  }
+  for(const s of SPOTS){
+    if(!s.onMap) continue;
+    const p=proj(s.lat,s.lng);
+    h+='<g class="map-marker" data-id="'+s.id+'" transform="translate('+p.x.toFixed(1)+','+(p.y.toFixed(1)-4)+')" style="cursor:pointer">'
+      +'<path class="mk-body" d="M0 -26 C-10 -26 -16 -18 -16 -10 C-16 -1 0 12 0 12 C0 12 16 -1 16 -10 C16 -18 10 -26 0 -26 Z" stroke="#fff" stroke-width="1.6"/>'
+      +'<circle cy="-10" r="5.5" fill="#fff"/></g>';
+  }
+  const pu=proj(MOCK_USER.lat,MOCK_USER.lng);
+  h+='<g transform="translate('+pu.x.toFixed(1)+','+pu.y.toFixed(1)+')"><circle class="user-dot" r="11" stroke="#fff" stroke-width="2"/><circle class="user-core" r="5"/></g>';
+  g.innerHTML=h;
+}
+function renderList(){
+  const el=$('listScroll'); const L=[]; const user=MOCK_USER;
+  const grouped={}; for(const s of SPOTS){(grouped[s.cat]=grouped[s.cat]||[]).push(s);}
+  for(const c of CATS){
+    const arr=grouped[c.key]||[]; if(!arr.length) continue;
+    arr.sort((a,b)=>hav(user,a)-hav(user,b));
+    const open=state.expanded.has(c.key);
+    const catColor='var(--cat-'+c.key+')';
+    L.push('<div class="acc-header '+(open?'open':'')+'" data-cat="'+c.key+'" style="border-left-color:'+catColor+'">'
+      +'<span class="ah-text">'+c.label+' ('+arr.length+')</span><span class="ah-arrow">▶</span></div>');
+    if(open){
+      for(const s of arr){
+        const d=hav(user,s);
+        L.push('<div class="spot-row"><div class="spot-dot" style="background:'+catColor+'"></div>'
+          +'<div class="spot-card" data-id="'+s.id+'"><img class="sc-img" src="assets/icon.png" alt="">'
+          +'<div class="sc-stripe"></div><div class="sc-body"><div class="sc-name">'+s.name+'</div>'
+          +'<div class="sc-summary">'+s.sum+'</div><div class="dist-pill">'+fmtDist(d)+'</div></div></div></div>');
+      }
+    }
+  }
+  el.innerHTML=L.join('');
+}
+function renderDetail(){
+  const el=$('detailScroll'); const s=SPOTS.find(x=>x.id===state.detailId);
+  if(!s){el.innerHTML='';return;}
+  const d=hav(MOCK_USER,s);
+  const back='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  let btn='';
+  if(s.audio!==false){
+    btn='<button class="play-btn" id="playBtn"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>播放语音讲解</button>';
+  }else{
+    btn='<div class="audio-hint" style="margin-top:24px;padding:16px;border-radius:12px;background:var(--primarySoft);text-align:center"><div style="font-size:13px;color:var(--primary);font-weight:500">📝 该景点暂无语音导览</div><div style="font-size:12px;color:var(--caption);margin-top:8px">请连接服务器后下拉刷新同步最新数据</div></div>';
+  }
+  el.innerHTML='<div class="detail-header"><button class="dh-back" id="backBtn">'+back+'</button><div class="dh-title">'+s.name+'</div></div>'
+    +'<img class="detail-hero" src="assets/icon.png" alt="">'
+    +'<div class="detail-body"><div class="dp-pill"><span class="dp-dot"></span>距您 '+fmtDist2(d)+'</div>'
+    +'<div class="detail-name">'+s.name+'</div>'
+    +'<div class="sec"><div class="sec-label">简介</div><div class="sec-summary">'+s.sum+'</div></div>'
+    +'<div class="sec"><div class="sec-label">详细介绍</div><div class="sec-text">'+s.desc+'</div></div>'
+    +btn+'</div>';
+}
+function renderAside(){
+  const t=THEMES[state.theme];
+  $('phoneCaption').innerHTML='<b>'+t.name+'</b> · '+t.tag+'<br>'+t.cap;
+  $('varBox').innerHTML=t.vars.map(v=>'<div class="var-row"><span class="vdot" style="background:'+v[1]+'"></span><span class="vname">'+v[2]+'</span><span class="vhex">'+v[1]+'</span></div>').join('');
+  $('howToRead').innerHTML=t.how.map(x=>'<li>'+x+'</li>').join('');
+  $('readBox').innerHTML=t.read.split('<br>').map(x=>'<li>'+x+'</li>').join('');
+}
+let triggerTimer=null;
+function showTrigger(){
+  const el=$('triggerCard');
+  el.innerHTML='<div class="trigger-card"><div class="tc-info"><div class="tc-tag">▶ 正在讲解</div><div class="tc-name">钟楼 · 求是担当</div></div>'
+    +'<button class="tc-stop" id="tcStop"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>停止播放</button></div>';
+  const stop=$('tcStop'); if(stop) stop.onclick=()=>{$('triggerCard').innerHTML='';};
+  if(triggerTimer) clearTimeout(triggerTimer);
+  triggerTimer=setTimeout(()=>{$('triggerCard').innerHTML='';},4000);
+}
+
+/* ===== 事件 ===== */
+document.querySelectorAll('[data-theme-btn]').forEach(b=>b.onclick=()=>{
+  state.theme=b.dataset.themeBtn;
+  document.documentElement.setAttribute('data-theme',state.theme);
+  document.querySelectorAll('[data-theme-btn]').forEach(x=>x.classList.toggle('on',x===b));
+  renderAside();
+});
+document.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.apply;
+  state.theme=k;
+  document.documentElement.setAttribute('data-theme',k);
+  document.querySelectorAll('[data-theme-btn]').forEach(x=>x.classList.toggle('on',x.dataset.themeBtn===k));
+  renderAside();
+  document.querySelector('.preview-stage').scrollIntoView({behavior:'smooth',block:'center'});
+  b.style.transform='scale(.97)'; setTimeout(()=>{b.style.transform='';},120);
+});
+document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.screen;state.detailId=null;render();});
+document.querySelectorAll('.tab-item').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.detailId=null;render();});
+document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.demo;
+  if(k==='status'){state.statusIdx=(state.statusIdx+1)%STATUS.length;renderStatus();}
+  if(k==='fence'){state.fencesOn=!state.fencesOn;renderOverlay();}
+  if(k==='trigger'){showTrigger();}
+});
+$('mapStatus').addEventListener('click',e=>{
+  if(!e.target.closest('.status-pill')) return;
+  state.statusIdx=(state.statusIdx+1)%STATUS.length; renderStatus();
+});
+$('fenceToggle').onclick=()=>{state.fencesOn=!state.fencesOn;renderOverlay();};
+$('recenterBtn').onclick=()=>{const b=$('recenterBtn');b.style.transition='transform .25s';b.style.transform='scale(1.16)';setTimeout(()=>{b.style.transform='';},250);};
+$('listScroll').addEventListener('click',e=>{
+  const h=e.target.closest('.acc-header');
+  if(h){const k=h.dataset.cat; state.expanded.has(k)?state.expanded.delete(k):state.expanded.add(k); renderList(); return;}
+  const c=e.target.closest('.spot-card');
+  if(c){state.detailId=+c.dataset.id; state.prevTab=state.tab; state.tab='detail'; render();}
+});
+$('detailScroll').addEventListener('click',e=>{
+  if(e.target.closest('#backBtn')){state.tab=state.prevTab;state.detailId=null;render();}
+});
+$('viewMap').querySelector('.map-svg').addEventListener('click',e=>{
+  const m=e.target.closest('.map-marker');
+  if(m){state.detailId=+m.dataset.id;state.prevTab='map';state.tab='detail';render();}
+});
+
+render();
+</script>
+</body>
+</html>

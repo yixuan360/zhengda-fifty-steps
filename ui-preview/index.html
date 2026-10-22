@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>郑大五十步 · 现有界面预览</title>
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap">
+<style>
+/* ============ 设计令牌（来自 app/constants/theme.ts V5.6） ============ */
+:root{
+  --primary:#1A7A5A; --primarySoft:#E8F5F0; --accent:#C67B4B;
+  --pageBg:#F2F4F6; --cardBg:rgba(255,255,255,0.88); --cardBorder:rgba(255,255,255,0.6);
+  --heading:#1A1A1A; --body:#4A4A4A; --caption:#999; --divider:#EAEAEA;
+  --playerBg:rgba(20,22,26,0.94); --hintBg:rgba(198,123,75,0.92);
+  --error:#D94A4A; --warningBg:rgba(217,74,74,0.88);
+  --infoBg:rgba(26,122,90,0.10); --distanceBg:#F0F8F5;
+  --cat-college:#8B1A2B; --cat-nature:#2E7D32; --cat-architecture:#6D4C41;
+  --cat-teaching:#00838F; --cat-service:#7B1FA2; --cat-humanity:#F9A825;
+  --radiusSm:8px; --radiusMd:12px; --radiusLg:16px; --radiusPill:999px;
+  --shadowCard:0 2px 12px rgba(0,0,0,.06);
+  --shadowElev:0 4px 16px rgba(0,0,0,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+html,body{height:100%}
+body{font-family:'Noto Sans SC',-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#EDF0F3;color:var(--heading);line-height:1.5}
+
+/* ============ 页面头部 ============ */
+.page-header{background:linear-gradient(135deg,#123F2E 0%,#1A7A5A 100%);color:#fff;padding:26px 40px 22px}
+.page-header h1{font-size:24px;font-weight:900;letter-spacing:.5px}
+.page-header .sub{font-size:13px;color:rgba(255,255,255,.78);margin-top:6px}
+.header-badges{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.hbadge{font-size:12px;font-weight:500;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
+
+/* ============ 主布局 ============ */
+.main{display:flex;gap:26px;padding:26px 40px 40px;align-items:flex-start;max-width:1460px;margin:0 auto}
+.phone-col{flex:0 0 auto}
+.info-col{flex:1 1 460px;min-width:320px;display:flex;flex-direction:column;gap:16px}
+
+/* ============ 手机框 ============ */
+.phone-shell{width:414px;background:#15171A;border-radius:46px;padding:14px;box-shadow:0 24px 60px rgba(15,40,30,.28),0 4px 14px rgba(0,0,0,.16);border:1px solid #2A2E33}
+.screen{width:386px;height:840px;border-radius:34px;overflow:hidden;position:relative;background:var(--pageBg);display:flex;flex-direction:column}
+.sb{height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:transparent;z-index:60}
+.sb-time{font-size:14px;font-weight:600}
+.sb-icons{display:flex;gap:5px;align-items:center}
+.sb-icons svg{display:block}
+.view{flex:1 1 auto;position:relative;overflow:hidden;display:none}
+.view.active{display:block}
+
+/* ============ 底部 Tab（来自 (tabs)/_layout.tsx） ============ */
+.tabbar{height:78px;flex:0 0 78px;background:rgba(255,255,255,.9);backdrop-filter:blur(14px);border-top:.5px solid var(--divider);display:flex;align-items:flex-start;padding-top:8px;z-index:70}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;font-family:inherit}
+.tab-item .ti-label{font-size:11px;font-weight:500}
+.tab-item.active .ti-label{color:var(--primary)}
+.tab-item:not(.active) .ti-label{color:var(--caption)}
+.tab-item svg{display:block}
+.tab-item.active .tibg{color:var(--primary)}
+.tab-item:not(.active) .tibg{color:var(--caption)}
+
+/* ============ 地图页 ============ */
+.map-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.map-poi{font-size:10.5px;fill:#7A8086;font-weight:500}
+.map-poi-sm{font-size:9px;fill:#98A0A6}
+.status-wrap{position:absolute;top:12px;left:16px;right:16px;z-index:55;pointer-events:none}
+.status-pill{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:999px;box-shadow:var(--shadowCard);border:1px solid;font-size:13px;font-weight:600;text-align:center}
+.status-pill--info{background:var(--cardBg);border-color:var(--cardBorder);color:var(--heading);backdrop-filter:blur(10px)}
+.status-pill--warn{background:var(--warningBg);border-color:rgba(217,74,74,.3);color:#fff}
+.status-pill--fair{background:var(--hintBg);border-color:rgba(198,123,75,.3);color:#fff}
+.status-pill--mock{background:rgba(240,180,41,.95);border-color:rgba(240,180,41,.5);color:#3D2E00}
+.fence-toggle,.recenter-btn{position:absolute;z-index:54;width:40px;height:40px;border-radius:20px;background:var(--cardBg);backdrop-filter:blur(10px);border:.5px solid var(--cardBorder);box-shadow:var(--shadowCard);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)}
+.fence-toggle{top:66px;right:16px}
+.recenter-btn{right:16px;bottom:20px;width:44px;height:44px;border-radius:22px}
+.debug-trigger{position:absolute;top:70px;left:16px;z-index:54;padding:6px;font-size:11px;font-weight:300;color:var(--caption);opacity:.55;cursor:pointer;user-select:none}
+.attrib{position:absolute;left:10px;bottom:16px;z-index:40;font-size:9.5px;color:#9AA0A6}
+.trigger-card{position:absolute;top:66px;left:16px;right:16px;z-index:95;background:rgba(20,22,26,.94);border-radius:16px;padding:10px 12px;display:flex;align-items:center;border:1px solid rgba(255,255,255,.15);box-shadow:var(--shadowElev);color:#fff}
+.trigger-card .tc-info{flex:1;margin-right:12px;min-width:0}
+.trigger-card .tc-tag{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px}
+.trigger-card .tc-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trigger-card .tc-stop{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:none;color:#fff;font-family:inherit}
+.toast-wrap{position:absolute;top:118px;left:16px;right:16px;z-index:94;pointer-events:none}
+.toast{display:flex;align-items:center;padding:10px 12px;border-radius:16px;border:1px solid;box-shadow:var(--shadowCard);font-size:12px;font-weight:600;color:#fff;gap:6px;pointer-events:auto;cursor:pointer}
+.toast--error{background:rgba(217,74,74,.94);border-color:rgba(217,74,74,.3)}
+.toast--hint{background:rgba(198,123,75,.94);border-color:rgba(198,123,75,.3)}
+.toast .toast-text{flex:1}
+.toast .toast-act{font-size:11px;font-weight:700;opacity:.85;white-space:nowrap}
+.mock-panel{position:absolute;top:106px;left:16px;right:16px;z-index:96;max-height:380px;overflow-y:auto;border-radius:16px;background:var(--cardBg);backdrop-filter:blur(14px);border:1px solid var(--primary);box-shadow:var(--shadowElev);padding:16px}
+.mock-panel h4{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:12px}
+.mock-label{font-size:12px;font-weight:600;color:var(--caption);margin:8px 0 8px}
+.mock-quick{display:flex;flex-wrap:wrap;gap:6px}
+.mock-qbtn{padding:6px 12px;border-radius:999px;background:var(--primarySoft);border:none;font-size:12px;font-weight:500;color:var(--primary);cursor:pointer;font-family:inherit}
+.mock-inputrow{display:flex;gap:6px}
+.mock-input{flex:1;height:38px;border-radius:8px;border:1px solid var(--divider);padding:0 10px;font-size:13px;color:var(--heading);background:#fff;font-family:inherit;min-width:0}
+.mock-apply{height:38px;padding:0 16px;border-radius:8px;background:var(--primary);border:none;font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit}
+.mock-clear{margin-top:12px;padding:10px;border-radius:8px;border:1px solid var(--error);background:none;font-size:13px;font-weight:500;color:var(--error);width:100%;cursor:pointer;font-family:inherit}
+.mock-close{margin-top:8px;padding:8px;border:none;background:none;font-size:12px;color:var(--caption);width:100%;cursor:pointer;font-family:inherit}
+.debug-panel{position:absolute;left:16px;right:16px;bottom:14px;z-index:93;background:rgba(20,22,26,.92);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.15)}
+.debug-head{width:100%;padding:8px 12px;font-size:12px;font-weight:600;color:#fff;background:none;border:none;text-align:left;cursor:pointer;font-family:inherit}
+.debug-body{padding:2px 12px 12px}
+.debug-row{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:2px 0}
+.debug-row .dl{flex:0 0 64px;color:rgba(255,255,255,.55)}
+.debug-row .dv{flex:1;color:#fff;word-break:break-all}
+.modal-mask{position:absolute;inset:0;z-index:120;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:40px}
+.modal-box{width:280px;background:#fff;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.25)}
+.modal-box h4{font-size:16px;font-weight:700;margin-bottom:8px}
+.modal-box p{font-size:13px;color:var(--body);line-height:20px;margin-bottom:16px;word-break:break-all}
+.modal-actions{display:flex;gap:10px}
+.modal-actions button{flex:1;padding:9px 0;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-cancel{background:#F0F1F3;color:var(--body)}
+.btn-ok{background:var(--primary);color:#fff}
+
+/* ============ 列表页 ============ */
+.list-scroll{position:absolute;inset:0;overflow-y:auto;background:var(--pageBg);padding-bottom:40px}
+.syncbar{margin:12px 16px 0;padding:12px;border-radius:12px;background:var(--warningBg);border:1px solid rgba(217,74,74,.3)}
+.syncbar p{font-size:13px;color:#fff;font-weight:500;line-height:19px}
+.acc-header{display:flex;align-items:center;margin:12px 16px 0;padding:12px 16px;border-radius:12px;background:var(--cardBg);backdrop-filter:blur(10px);border-left:4px solid;border-top:1px solid var(--cardBorder);border-right:1px solid var(--cardBorder);border-bottom:1px solid var(--cardBorder);cursor:pointer;user-select:none;box-shadow:var(--shadowCard)}
+.acc-header .ah-text{flex:1;font-size:15px;font-weight:700;color:var(--heading)}
+.acc-header .ah-arrow{font-size:12px;color:var(--caption);transition:transform .18s ease}
+.acc-header.open .ah-arrow{transform:rotate(90deg)}
+.spot-row{display:flex;align-items:stretch;margin-left:16px}
+.spot-dot{width:4px;margin-right:12px;flex:0 0 auto}
+.spot-card{flex:1;display:flex;flex-direction:row;background:var(--cardBg);backdrop-filter:blur(10px);border-radius:16px;margin:8px 16px 8px 0;overflow:hidden;border:1px solid var(--cardBorder);box-shadow:var(--shadowCard);cursor:pointer}
+.spot-card .sc-img{width:100px;height:100px;object-fit:cover;background:var(--divider)}
+.spot-card .sc-stripe{width:4px;background:var(--primary);margin-right:12px;flex:0 0 auto}
+.spot-card .sc-body{flex:1;padding:16px 16px 16px 0;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.sc-name{font-size:16px;font-weight:700;color:var(--heading);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-badge{font-size:13px;color:var(--caption);font-weight:400}
+.sc-summary{font-size:13px;color:var(--body);margin-top:4px;line-height:19px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dist-pill{align-self:flex-start;margin-top:8px;padding:3px 10px;border-radius:999px;background:var(--distanceBg);font-size:12px;font-weight:600;color:var(--primary)}
+.list-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding-top:60px;background:var(--pageBg)}
+.list-empty .le-icon{font-size:40px}
+.list-empty .le-hint{font-size:16px;font-weight:600}
+.list-empty .le-refresh{margin-top:4px;padding:4px 12px;border-radius:999px;background:var(--primarySoft);font-size:13px;color:var(--primary)}
+
+/* ============ 详情页 ============ */
+.detail-scroll{position:absolute;inset:0;overflow-y:auto;background:var(--pageBg)}
+.detail-header{position:sticky;top:0;z-index:20;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--pageBg)}
+.detail-header .dh-back{width:34px;height:34px;border:none;background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)}
+.detail-header .dh-title{font-size:17px;font-weight:600;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.detail-hero{width:100%;height:260px;object-fit:cover;background:var(--divider);display:block}
+.detail-body{padding:16px 16px 32px}
+.dp-pill{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:8px 16px;background:var(--cardBg);border-radius:999px;border:1px solid var(--cardBorder);box-shadow:var(--shadowCard);font-size:14px;font-weight:500;color:var(--primary)}
+.dp-pill .dp-dot{width:8px;height:8px;border-radius:4px;background:var(--primary)}
+.detail-name{font-size:24px;font-weight:700;color:var(--heading);letter-spacing:-.4px;margin-bottom:16px}
+.sec{margin-top:20px}
+.sec-label{font-size:12px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.sec-summary{font-size:16px;color:var(--body);line-height:26px;font-weight:500}
+.sec-text{font-size:15px;color:var(--body);line-height:25px;margin-top:4px}
+.play-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;padding:14px;border-radius:12px;border:1.5px solid var(--primary);background:var(--primarySoft);font-size:15px;font-weight:600;color:var(--primary);cursor:pointer;width:100%;font-family:inherit}
+.play-btn.active{background:var(--primary);color:#fff}
+.audio-hint{margin-top:24px;padding:16px;border-radius:12px;background:var(--primarySoft);text-align:center}
+.audio-hint .ah1{font-size:13px;color:var(--primary);font-weight:500}
+.audio-hint .ah2{font-size:12px;color:var(--caption);margin-top:8px}
+
+/* ============ 右侧信息面板 ============ */
+.panel-card{background:#fff;border-radius:16px;padding:18px 20px;box-shadow:0 2px 10px rgba(20,50,40,.06);border:1px solid #E8ECEE}
+.panel-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin-bottom:12px}
+.panel-title .pt-bar{width:4px;height:16px;border-radius:2px;background:var(--primary)}
+.panel-title .pt-tag{margin-left:auto;font-size:11px;font-weight:500;color:var(--caption);background:#F4F6F7;padding:2px 10px;border-radius:999px}
+.bullets{list-style:none;display:flex;flex-direction:column;gap:7px}
+.bullets li{font-size:13px;color:var(--body);line-height:1.65;padding-left:16px;position:relative}
+.bullets li::before{content:'';position:absolute;left:2px;top:9px;width:5px;height:5px;border-radius:2px;background:var(--primary);opacity:.7}
+.bullets li b{color:var(--heading);font-weight:600}
+.demo-row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12.5px;font-weight:500;padding:6px 14px;border-radius:999px;border:1px solid #DFE5E8;background:#F7F9FA;color:var(--body);cursor:pointer;font-family:inherit;transition:all .15s}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.chip--demo{background:var(--primarySoft);border-color:rgba(26,122,90,.35);color:var(--primary)}
+.swatch-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.swatch{display:flex;flex-direction:column;align-items:center;gap:5px;width:76px}
+.swatch .sw{width:44px;height:44px;border-radius:12px;border:1px solid rgba(0,0,0,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.swatch .sw-name{font-size:10.5px;color:var(--caption)}
+.swatch .sw-hex{font-size:10px;color:var(--body);font-weight:600}
+.token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:4px}
+.tok{font-size:12px;color:var(--body);background:#F7F9FA;border:1px solid #EDF0F2;border-radius:8px;padding:6px 10px}
+.tok b{color:var(--heading);font-weight:600}
+.cat-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--body);padding:5px 0;border-bottom:1px dashed #EDF0F2}
+.cat-row:last-child{border-bottom:none}
+.cat-row .cat-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.cat-row .cat-key{color:var(--caption);font-size:11px;margin-left:auto}
+.demo-note{font-size:12px;color:var(--caption);line-height:1.7;margin-top:10px;background:#F7F9FA;border-radius:8px;padding:10px 12px}
+.demo-note b{color:var(--body)}
+
+/* ============ 页脚 ============ */
+.footnote{max-width:1460px;margin:0 auto;padding:0 40px 36px;font-size:12px;color:#8A9196;line-height:1.8}
+
+/* ============ 响应式 ============ */
+@media (max-width:1080px){
+  .main{flex-direction:column;align-items:center;padding:20px 16px 32px}
+  .phone-shell{width:min(414px,94vw)}
+  .screen{width:100%;height:min(840px,150vw)}
+  .page-header{padding:22px 20px}
+  .footnote{padding:0 16px 28px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 头部 ===== -->
+<header class="page-header">
+  <h1>郑大五十步 · 现有界面预览</h1>
+  <div class="sub">郑州大学主校区智慧导览 App — Expo / React Native · expo-router · react-native-amap3d 高德地图</div>
+  <div class="header-badges">
+    <span class="hbadge">设计系统 V5.6 玻璃拟态</span>
+    <span class="hbadge">内置种子数据 60+ 景点 / 6 分类</span>
+    <span class="hbadge">3 个页面 + 触发讲解浮层</span>
+    <span class="hbadge">高保真还原真实源码</span>
+  </div>
+</header>
+
+<!-- ===== 主体 ===== -->
+<div class="main">
+
+  <!-- 左：手机模拟 -->
+  <div class="phone-col">
+    <div class="phone-shell">
+      <div class="screen" id="screen">
+        <!-- 状态栏 -->
+        <div class="sb">
+          <span class="sb-time">9:41</span>
+          <span class="sb-icons">
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><path d="M1 4h2v5H1zM4.5 2h2v7h-2zM8 0h2v9H8zM11.5 3h2v6h-2z" fill="#1A1A1A"/><rect x="13" y="5" width="3" height="6" rx="1.5" fill="#1A1A1A" opacity=".35"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9a2 2 0 100 4 2 2 0 000-4z" fill="#1A1A1A" transform="translate(0,-1)"/><path d="M8 6.2a5.4 5.4 0 013.8 1.6l-1.3 1.3A3.8 3.8 0 008 7.9c-1 0-2 .4-2.6 1.2L4 7.8A5.4 5.4 0 018 6.2z" fill="#1A1A1A" transform="translate(0,-1)"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#1A1A1A" opacity=".4"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="#1A1A1A"/><rect x="23" y="4" width="2" height="4" rx="1" fill="#1A1A1A" opacity=".4"/></svg>
+          </span>
+        </div>
+
+        <!-- 视图：地图 -->
+        <div class="view active" id="viewMap">
+          <svg class="map-svg" viewBox="0 0 390 726" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <pattern id="bld" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="#EFEDE7"/><rect x="0" y="0" width="13" height="13" fill="#EBE9E2"/></pattern>
+              <linearGradient id="lake" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D8EAE3"/><stop offset="1" stop-color="#CBE2D8"/></linearGradient>
+              <linearGradient id="park" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DFEBD6"/><stop offset="1" stop-color="#D3E3C9"/></linearGradient>
+            </defs>
+            <rect width="390" height="726" fill="#F6F4EF"/>
+            <!-- 校园绿地 -->
+            <ellipse cx="196" cy="168" rx="86" ry="74" fill="url(#park)"/>
+            <ellipse cx="196" cy="168" rx="86" ry="74" fill="none" stroke="#CBDCB8" stroke-width="1"/>
+            <ellipse cx="188" cy="486" rx="52" ry="34" fill="url(#park)"/>
+            <ellipse cx="300" cy="300" rx="34" ry="26" fill="url(#park)"/>
+            <ellipse cx="150" cy="430" rx="30" ry="20" fill="url(#park)"/>
+            <!-- 眉湖 -->
+            <path d="M128 352 C 122 336 130 322 146 316 C 168 308 196 306 216 312 C 236 318 248 330 246 344 C 244 358 232 368 214 372 C 196 376 172 376 154 370 C 138 365 132 364 128 352 Z" fill="url(#lake)" stroke="#B7D4C6" stroke-width="1.2"/>
+            <path d="M158 336 C 170 330 196 328 212 334" stroke="#CFE6DC" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <!-- 道路 -->
+            <g stroke="#FFFFFF" stroke-width="11" stroke-linecap="round">
+              <path d="M100 90 V 660"/><path d="M187 90 V 660"/><path d="M244 90 V 660"/><path d="M300 90 V 660"/>
+              <path d="M70 120 H 345"/><path d="M70 300 H 345"/><path d="M70 407 H 345"/><path d="M70 500 H 345"/><path d="M70 626 H 345"/>
+            </g>
+            <g stroke="#E3E0D8" stroke-width="1" fill="none">
+              <path d="M100 90 V 660"/><path d="M187 90 V 660"/><path d="M244 90 V 660"/><path d="M300 90 V 660"/>
+              <path d="M70 120 H 345"/><path d="M70 300 H 345"/><path d="M70 407 H 345"/><path d="M70 500 H 345"/><path d="M70 626 H 345"/>
+            </g>
+            <!-- 建筑群 -->
+            <g fill="url(#bld)" stroke="#D8D4CA" stroke-width=".8">
+              <rect x="110" y="135" width="60" height="48" rx="3"/>
+              <rect x="256" y="135" width="38" height="48" rx="3"/>
+              <rect x="258" y="320" width="36" height="66" rx="3"/>
+              <rect x="110" y="325" width="62" height="58" rx="3"/>
+              <rect x="196" y="315" width="40" height="40" rx="3"/>
+              <rect x="252" y="418" width="42" height="66" rx="3"/>
+              <rect x="108" y="420" width="66" height="62" rx="3"/>
+              <rect x="252" y="515" width="42" height="94" rx="3"/>
+              <rect x="108" y="515" width="66" height="94" rx="3"/>
+              <rect x="306" y="412" width="30" height="180" rx="3"/>
+              <rect x="70" y="130" width="20" height="460" rx="3" opacity=".55"/>
+              <rect x="312" y="130" width="26" height="120" rx="3" opacity=".55"/>
+              <rect x="120" y="638" width="160" height="18" rx="3" opacity=".4"/>
+              <rect x="110" y="100" width="70" height="14" rx="3" opacity=".45"/>
+            </g>
+            <!-- 南门广场星标 -->
+            <g transform="translate(196,636)">
+              <circle r="14" fill="#EFE9DB" stroke="#D9D2C2"/>
+              <path d="M0 -6 L1.7 -2 L6 -2 L2.6 1 L3.8 5 L0 3 L-3.8 5 L-2.6 1 L-6 -2 L-1.7 -2 Z" fill="#C9A227"/>
+            </g>
+            <!-- POI 标注（模拟高德原生 POI） -->
+            <text class="map-poi" x="196" y="140">厚山</text>
+            <text class="map-poi" x="176" y="352">眉湖</text>
+            <text class="map-poi" x="160" y="486">樱花林</text>
+            <text class="map-poi" x="262" y="352">钟楼</text>
+            <text class="map-poi" x="288" y="392">图书馆</text>
+            <text class="map-poi" x="300" y="508">校医院</text>
+            <text class="map-poi" x="210" y="600">南核心教学区</text>
+            <text class="map-poi" x="118" y="370">本源体育场</text>
+            <text class="map-poi-sm" x="120" y="508">柳园</text>
+            <text class="map-poi-sm" x="196" y="455">校园商业街</text>
+            <text class="map-poi-sm" x="244" y="292">北核心教学区</text>
+            <text class="map-poi-sm" x="196" y="668">南大门</text>
+            <!-- 触发围栏与 Marker（JS 注入） -->
+            <g id="mapOverlay"></g>
+          </svg>
+          <div class="status-wrap" id="mapStatus"></div>
+          <div class="debug-trigger" id="debugTrigger">模拟</div>
+          <button class="fence-toggle" id="fenceToggle" title="触发围栏图层开关">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>
+          </button>
+          <button class="recenter-btn" id="recenterBtn" title="回到我的位置">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+          </button>
+          <div class="attrib">© 高德地图（示意）</div>
+          <div id="mockPanel"></div>
+          <div class="debug-panel" id="debugPanel">
+            <button class="debug-head" id="debugHead">🔍 调试面板 <span id="debugArrow">▸</span></button>
+            <div class="debug-body" id="debugBody" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- 视图：列表 -->
+        <div class="view" id="viewList">
+          <div class="list-scroll" id="listScroll"></div>
+        </div>
+
+        <!-- 视图：详情 -->
+        <div class="view" id="viewDetail">
+          <div class="detail-scroll" id="detailScroll"></div>
+        </div>
+
+        <!-- 全局浮层（真实代码中 TriggerCard / AppToast 挂载于根布局，跨页面显示） -->
+        <div class="toast-wrap" id="toastWrap"></div>
+        <div id="triggerCard"></div>
+        <div id="modal"></div>
+
+        <!-- 底部 Tab -->
+        <div class="tabbar">
+          <button class="tab-item active" data-tab="map">
+            <svg class="tibg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3.5 6.5v13L9 17l6 3 5.5-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/></svg>
+            <span class="ti-label">地图</span>
+          </button>
+          <button class="tab-item" data-tab="list">
+            <svg class="tibg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>
+            <span class="ti-label">景点</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-note" style="margin-top:12px;max-width:414px">本模拟器为 386×840 屏幕比例。顶部状态栏与底部 Tab 均按真实代码还原；地图为示意绘制，真实运行使用高德原生地图。</div>
+  </div>
+
+  <!-- 右：信息面板 -->
+  <div class="info-col">
+    <!-- 演示控制 -->
+    <div class="panel-card">
+      <div class="panel-title"><span class="pt-bar"></span>演示控制<span class="pt-tag">可交互</span></div>
+      <div class="demo-row" style="margin-bottom:10px">
+        <span class="chip" data-demo="status">顶部状态条</span>
+        <span class="chip" data-demo="syncbar">列表同步错误条</span>
+        <span class="chip" data-demo="trigger">触发讲解浮层</span>
+        <span class="chip" data-demo="toast-err">错误 Toast</span>
+        <span class="chip" data-demo="toast-hint">新景点提示</span>
+      </div>
+      <div class="demo-note">
+        <b>地图状态条演示</b>：点击地图上方的状态条区域，可在「无提示 / 同步中 / 定位精度不足(暂停) / 定位精度一般 / 模拟定位中」之间循环切换。
+        <br><b>模拟定位</b>：在地图左上角「模拟」文字上快速连点 5 次，会弹出模拟定位调试面板（与真实 preview 构建行为一致）。
+        <br><b>其他演示</b>：点击对应按钮即可在手机框内查看浮层效果。
+      </div>
+    </div>
+
+    <!-- 地图页 -->
+    <div class="panel-card">
+      <div class="panel-title"><span class="pt-bar"></span>地图页 · 首页<span class="pt-tag">(tabs)/map.tsx</span></div>
+      <ul class="bullets">
+        <li>打开 App 即进入地图（根路由 <b>index.tsx 重定向</b>），初始视野为郑大主校区中心（缩放 15）</li>
+        <li>高德原生地图（<b>react-native-amap3d</b>），关闭旋转/倾斜/缩放控件，顶部为<b>状态提示条</b>（同步中 / 精度不足暂停 / 模拟定位黄标等）</li>
+        <li>右上角<b>触发围栏开关</b>：绿色 15% 填充 + 45% 描边，支持圆形 / 走廊（Polyline）/ 多边形（Polygon）三种触发几何</li>
+        <li>右下角<b>回中按钮</b>：将镜头移回用户当前位置（缩放 16）</li>
+        <li>用户位置使用 JS Marker 蓝点（mock 优先），与触发引擎<b>同一数据源</b>，消除双定位源错位</li>
+        <li>「模拟」5 连击弹出模拟定位面板；底部<b>调试面板</b>（坐标 / 精度 / 门控 / 最近景点 / 引擎 / 触发记录）仅 preview 构建可见</li>
+      </ul>
+    </div>
+
+    <!-- 列表页 -->
+    <div class="panel-card">
+      <div class="panel-title"><span class="pt-bar"></span>景点列表页<span class="pt-tag">(tabs)/list.tsx</span></div>
+      <ul class="bullets">
+        <li>六个分类<b>手风琴分组</b>：学院 / 自然景观 / 特色建筑 / 教学区 / 生活服务 / 人文景观，每组左侧 4px 分类色指示条</li>
+        <li>分组默认全部收起，点击标题展开；有定位时按<b>距当前位置由近到远</b>排序，无定位按名称拼音</li>
+        <li>景点卡片（SpotCard）：左侧主色竖条 + 100×100 缩略图 + 名称 + 两行简介 + <b>距离胶囊</b>（如 320m / 1.2km）</li>
+        <li>下拉刷新从服务器同步；同步失败时顶部显示<b>红色警示条</b>（可点击演示按钮查看）</li>
+      </ul>
+    </div>
+
+    <!-- 详情页 -->
+    <div class="panel-card">
+      <div class="panel-title"><span class="pt-bar"></span>景点详情页<span class="pt-tag">spot/[id].tsx</span></div>
+      <ul class="bullets">
+        <li>顶部导航：返回 + 景点名（header 底色 #F2F4F6、返回键主色）</li>
+        <li>260px 大图 + <b>距离胶囊</b>（距您 xxx m）+ 大标题</li>
+        <li>「简介」（16px 加粗）+「详细介绍」两段式内容排版，小节标签为绿色大写字母</li>
+        <li><b>播放/停止两态按钮</b>：未播放为描边样式「播放语音讲解」，播放中变为实心「停止播放」（点击可切换演示）</li>
+        <li>无语音导览时显示提示卡（该景点暂无语音导览 / 请连接服务器后下拉刷新）</li>
+      </ul>
+    </div>
+
+    <!-- 全局交互 -->
+    <div class="panel-card">
+      <div class="panel-title"><span class="pt-bar"></span>全局交互与设计系统<span class="pt-tag">theme.ts V5.6</span></div>
+      <ul class="bullets">
+        <li><b>触发讲解浮层 TriggerCard</b>：自动触发后顶部弹出深色卡（▶ 正在讲解 + 景点名 + 停止播放），约 4 秒自动淡出，音频继续播放</li>
+        <li><b>AppToast</b>：红色错误条（点此重试）/ 棕色新景点提示条（点此切换），3-4 秒自动消失</li>
+        <li>玻璃拟态：白色 88% 半透明卡片 + 细边框 + 柔和阴影；主色 <b>#1A7A5A</b>（自然绿），强调色 <b>#C67B4B</b>，页面底色 #F2F4F6</li>
+        <li>六分类独立配色（右表），间距 4-24、圆角 8/12/16/胶囊</li>
+      </ul>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-college)"></span>🏫 学院<span class="cat-key">#8B1A2B</span></div>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-nature)"></span>🌿 自然景观<span class="cat-key">#2E7D32</span></div>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-architecture)"></span>🏛 特色建筑<span class="cat-key">#6D4C41</span></div>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-teaching)"></span>📚 教学区<span class="cat-key">#00838F</span></div>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-service)"></span>🍽 生活服务<span class="cat-key">#7B1FA2</span></div>
+      <div class="cat-row"><span class="cat-dot" style="background:var(--cat-humanity)"></span>📖 人文景观<span class="cat-key">#F9A825</span></div>
+      <div style="height:14px"></div>
+      <div class="swatch-row">
+        <div class="swatch"><span class="sw" style="background:#1A7A5A"></span><span class="sw-name">主色 primary</span><span class="sw-hex">#1A7A5A</span></div>
+        <div class="swatch"><span class="sw" style="background:#E8F5F0"></span><span class="sw-name">浅绿 primarySoft</span><span class="sw-hex">#E8F5F0</span></div>
+        <div class="swatch"><span class="sw" style="background:#C67B4B"></span><span class="sw-name">强调 accent</span><span class="sw-hex">#C67B4B</span></div>
+        <div class="swatch"><span class="sw" style="background:#F2F4F6"></span><span class="sw-name">页面底色</span><span class="sw-hex">#F2F4F6</span></div>
+        <div class="swatch"><span class="sw" style="background:#1A1A1A"></span><span class="sw-name">标题色</span><span class="sw-hex">#1A1A1A</span></div>
+        <div class="swatch"><span class="sw" style="background:#D94A4A"></span><span class="sw-name">错误色</span><span class="sw-hex">#D94A4A</span></div>
+      </div>
+      <div class="token-grid" style="margin-top:12px">
+        <span class="tok"><b>间距</b> 4 / 8 / 12 / 16 / 20 / 24</span>
+        <span class="tok"><b>圆角</b> 8 / 12 / 16 / 胶囊</span>
+        <span class="tok"><b>卡片阴影</b> 0 2px 12px 6%</span>
+        <span class="tok"><b>文字</b> 22/700 · 15/24 · 13 灰</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footnote">
+  预览说明：本页为基于项目真实源码（<b>app/constants/theme.ts</b> 设计系统 V5.6、<b>app/app/(tabs)/map.tsx · list.tsx · spot/[id].tsx</b>、<b>components/TriggerCard.tsx · AppToast.tsx · SpotCard.tsx</b>）与内置种子数据（<b>constants/seedSpots.ts</b>）制作的高保真界面预览，距离由 Haversine 公式按真实经纬度计算。真实 App 中的图片、音频与分类数据来自服务器同步，此处以占位图与种子数据展示。仅作界面浏览与优化讨论用，未对源码做任何修改。
+</footer>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+/* ===== 分类（真实来源：constants/theme.ts CATEGORY_*） ===== */
+const CATS=[
+  {key:'college',label:'🏫 学院',color:'#8B1A2B'},
+  {key:'nature',label:'🌿 自然景观',color:'#2E7D32'},
+  {key:'architecture',label:'🏛 特色建筑',color:'#6D4C41'},
+  {key:'teaching',label:'📚 教学区',color:'#00838F'},
+  {key:'service',label:'🍽 生活服务',color:'#7B1FA2'},
+  {key:'humanity',label:'📖 人文景观',color:'#F9A825'},
+];
+const catMap=Object.fromEntries(CATS.map(c=>[c.key,c]));
+
+/* ===== 景点数据（真实来源：constants/seedSpots.ts，坐标为 GCJ-02） ===== */
+const SPOTS=[
+  {id:1,name:'南大门',cat:'architecture',lat:34.808504,lng:113.535529,r:35,
+   sum:'郑大主校区标志性主入口，中轴线起点。',
+   desc:'郑州大学主校区标志性主入口，建筑设计大气规整，契合中原文化厚重特质，是新生入学报到、毕业生合影留念的核心打卡地，也是学校官方宣传与录取通知书上的视觉名片。承载着每一届郑大人的入学初心与毕业不舍，是校园集体记忆的标志性载体。',
+   fence:'circle',onMap:true},
+  {id:2,name:'五星广场',cat:'humanity',lat:34.809571,lng:113.535547,r:80,
+   sum:'南门入校后的首个核心广场，新生军训与升旗仪式举办地。',
+   desc:'南门入校后的首个核心广场，地面设有五星标识，是新生军训、日常升旗仪式、校园大型集会的核心场地，仪式感十足。广场名融合中国传统文化“五行”与现代科技“五大行星”内涵，既蕴含嵩岳尚学的崇高精神，也寓意郑大学子崇尚科学、追求卓越。',
+   fence:'circle',onMap:true},
+  {id:5,name:'南核心教学区',cat:'teaching',lat:34.815711,lng:113.535331,r:50,
+   sum:'钟楼南侧的连片教学楼群，郑大日常教学的主战场。',
+   desc:'钟楼南侧的连片教学楼群，包含多栋标准教学楼，承担文、理、工等多学科基础课程教学任务，教室配备完善的多媒体设备。是无数学子求学路上的核心记忆载体，见证了课堂学习与知识积累，是郑大“求是担当”校训在教学一线的核心实践阵地。2025年，郑州大学承办举行“中国国际大学生创新大赛”，南核心教学区作为主要答辩场所，迎来了全面升级。',
+   onMap:true},
+  {id:6,name:'河源（眉湖八景）',cat:'nature',lat:34.815959,lng:113.534744,r:35,
+   sum:'眉湖水系最南端起点，黄河文化主题景观。',
+   desc:'眉湖水系最南端的起点景观，由涌泉池、浮雕壁和彩陶池底构成，常年有泉水涌出，是眉湖人文八景的开篇之作。核心致敬中原作为华夏文明发源地的底蕴：河南是仰韶文化核心分布区，郑州是仰韶彩陶艺术的重要出土区域，黄河孕育了中原文明。“河源”既象征黄河之水的文明起源，也寓意郑大扎根中原、传承黄河文化的办学初心。',
+   fence:'circle',onMap:true},
+  {id:7,name:'问鼎（眉湖八景）',cat:'humanity',lat:34.8166,lng:113.5349,r:10,
+   sum:'商代“乳钉纹铜方鼎”1:1复制品，中原青铜文化展示。',
+   desc:'郑州是商代早期都城所在地，郑州商城是3600年前世界上规模最大的都城，此鼎是商代早期青铜文明的巅峰代表；同时呼应“问鼎中原”的历史典故，春秋诸侯争霸的核心就在中原大地，鼎既象征河南厚重的青铜文明，也寄寓郑大学子勇立潮头、敢为人先的志向。',
+   audio:false},
+  {id:10,name:'太和柱',cat:'humanity',lat:34.8185,lng:113.5355,r:50,
+   sum:'12米高青铜柱雕塑，飞龙盘绕，校园文化精神象征。',
+   desc:'位于眉湖景观核心位置，12米高的青铜柱雕塑，飞龙盘绕柱身，顶部为蜡烛火苗造型，是眉湖的核心标志性雕塑。河南是华夏龙文化的核心发源地，火苗造型既象征教师红烛奉献精神，更寓意华夏文明薪火相传、生生不息。',
+   fence:'circle',onMap:true},
+  {id:13,name:'凤台荷香（眉湖八景）',cat:'nature',lat:34.8206,lng:113.5361,r:33,
+   sum:'取自清代郑州八景之一，水域种植荷花、芦苇、香蒲等水生植物，岸边设休憩小屋，夏季荷香四溢，是校园赏荷、静心的核心点位。',
+   desc:'此景复刻清代郑州八景之一的“凤台荷香”，原址位于郑州市凤凰台村，是郑州本土经典历史景观；夏季荷香、书香、茶香交融，体现了自然与人文的和谐共生，是中原传统园林审美在校园景观中的经典呈现。'},
+  {id:15,name:'元和广场',cat:'humanity',lat:34.817137,lng:113.53714,r:45,
+   sum:'钟楼所在的核心礼仪广场，跨年敲钟地标。',
+   desc:'校园核心礼仪广场，钟楼坐落于此，“元和”寓意元气始生、和谐统一。每年元旦前夜的跨年敲钟活动在此举行，是郑大学子专属的“零点记忆”，与南大门“五星广场”相呼应，构成校园核心礼仪空间。'},
+  {id:16,name:'钟楼',cat:'architecture',lat:34.817137,lng:113.537314,r:25,
+   sum:'郑大主校区核心地标，红砖外立面，楼体镌刻“求是担当”校训。',
+   desc:'选址与设计深度呼应河南“天地之中”的历史地位——登封“天地之中”历史建筑群是世界文化遗产，郑州自古就是“天下之中”的核心区域；钟楼昭示郑大“居天下之中，为天下之学”的办学定位，元旦跨年钟声是校园最具仪式感的文化符号。',
+   fence:'circle',onMap:true},
+  {id:18,name:'图书馆',cat:'architecture',lat:34.817023,lng:113.538741,r:60,
+   sum:'亚洲高校单体面积最大的图书馆之一，郑大主校区核心地标之一。',
+   desc:'馆内藏书海量，阅览区宽敞舒适，是全校学子自习、阅读、备考的首选圣地。建筑设计以“书山有路勤为径”为核心理念，日均人流量居全国高校前列，承载着无数学子的奋斗记忆，是郑大学风建设的核心阵地。',
+   fence:'circle',onMap:true},
+  {id:19,name:'北核心教学区',cat:'teaching',lat:34.818705,lng:113.536533,r:50,
+   sum:'钟楼北侧教学建筑群。',
+   desc:'钟楼北侧的教学建筑群，以专业教学、基础实验课程为主，硬件设施齐全，是郑大学子日常上课、自主学习的核心区域。依托学校“双一流”建设学科打造，是郑州大学人才培养与科技创新的核心载体。',
+   onMap:true},
+  {id:20,name:'厚山',cat:'nature',lat:34.822053,lng:113.5354,r:60,
+   sum:'主校区唯一山体景观，山上植被茂密，设有步道、亭台、瀑布，登顶可俯瞰整个校园全景，是晨读、散步、放松身心的绝佳去处，也是校园北端的生态屏障。',
+   desc:'山名取自《周易》“厚德载物”，呼应郑大“笃信仁厚”的精神内核；这座高20.79米的山体，由新校区建设时的建筑废料堆填而成，是绿色环保理念的生动实践；山上古树移植自河南嵩县，山水与眉湖相连，构成“山环水抱”的格局，契合中原传统山水审美。',
+   fence:'circle',onMap:true},
+  {id:26,name:'樱花林',cat:'nature',lat:34.813669,lng:113.535238,r:50,
+   sum:'春季樱花如云似霞，漫天纷飞，如云似霞，是郑州春季知名的赏花点位，也是校园最具浪漫氛围的景观之一。',
+   desc:'樱花园不仅承载着郑大人的青春记忆，也成为学校与市民共享生态美景、传递校园文化的重要窗口，是郑州春季文旅的标志性打卡地之一。',
+   fence:'poly',poly:[{lat:34.814374,lng:113.534023},{lat:34.813356,lng:113.534118},{lat:34.8132,lng:113.537169},{lat:34.813826,lng:113.537264},{lat:34.814432,lng:113.536287}],onMap:true},
+  {id:29,name:'本源体育场',cat:'architecture',lat:34.81715,lng:113.532176,r:155,
+   sum:'郑大主校区最大标准体育场，校运会与大型活动举办地。',
+   desc:'郑大主校区规模最大的标准体育场，设有标准跑道、足球场与观众席，承办校运动会、各类体育赛事、大型文体活动。名称有双重渊源：一是致敬郑大1976级校友胡葆森，他向母校捐赠1亿元设立“本源教育发展基金”，开创了河南高校校友大额捐赠的先河；二是“本源”取“正本清源、追本溯源”之意，既提醒学子不忘求学初心，更呼应河南作为华夏文明本源之地的历史定位，是中原文化根脉精神的具象化。',
+   fence:'circle',onMap:true},
+  {id:36,name:'校医院',cat:'service',lat:34.826245,lng:113.538602,r:45,
+   sum:'位于北门东侧，校园专属医疗机构。',
+   desc:'位于主校区北门东侧、北操场附近，校园专属医疗服务机构，内设内科、外科、急诊、体检科等多个科室，承担师生日常就诊、健康体检与疫情防控等职能，是校园公共卫生安全与师生健康保障的核心阵地。',
+   onMap:true},
+  {id:42,name:'校园商业街',cat:'service',lat:34.814282,lng:113.533863,r:50,
+   sum:'荷园柳园之间，校园CBD，24小时便利店齐全。',
+   desc:'位于荷园东侧，是郑大最繁华的商业核心区。涵盖超市、书店、餐饮、美妆、文具等各类商铺，全方位满足学子学习、生活、休闲需求，不仅是校园生活配套的核心组成部分，更是校园商业文化、青春社交的重要载体，是郑大校园生活不可或缺的一部分。',
+   fence:'corr',poly:[{lat:34.815634,lng:113.53368},{lat:34.815185,lng:113.533682},{lat:34.814896,lng:113.533696},{lat:34.814662,lng:113.533741},{lat:34.814428,lng:113.533773},{lat:34.813334,lng:113.533782}],onMap:true},
+  {id:43,name:'生命科学学院',cat:'college',lat:34.815751,lng:113.538621,r:40,
+   sum:'中国科学院院士、校长李蓬教授领衔，生物学一级博士点，ESI全球前1%。',
+   desc:'生命科学学院前身为2001年成立的生物工程系，2013年更名。现有教职工150人，中国科学院院士李蓬教授任首席教授。拥有生物学一级博士点、博士后流动站，生物技术、生物工程、生物信息学、植物科学与技术4个本科专业。生物学与生物化学、分子生物学与遗传学等方向进入ESI全球前1%。设天健培英班，与新加坡国立大学等联合培养。科研成果转化突出：治疗肝纤维化药物ADN-9转让5000万元，获中国专利银奖。',
+   onMap:true},
+  {id:44,name:'聚英园餐厅',cat:'service',lat:34.815751,lng:113.538621,r:30,
+   sum:'柳园生活区三层食堂，承德餐厅与清真餐厅兼具，性价比高。',
+   desc:'聚英园餐厅位于柳园宿舍区，共三层。一楼为大众餐厅，窗口丰富价格实惠；二楼分为承德餐厅和清真餐厅；三楼为同和昌食府适合聚餐。推荐：摇滚炒鸡、麻辣香锅、小鱼盖饭、螺蛳粉、大盘鸡、隆江猪脚饭。营业时间6:30-8:30/10:30-13:30/16:30-19:30。是郑大最受学生欢迎的食堂之一。'},
+  {id:46,name:'荷园一餐厅',cat:'service',lat:34.814017,lng:113.530565,r:45,
+   sum:'荷园配套双层食堂，二楼网红餐厅匆匆那年。',
+   desc:'一楼汇聚重庆小面、花甲粉、热干面等南北美食，早餐灌汤小笼包皮薄爆汁。二楼匆匆那年是校园网红餐厅，文艺装修高颜值打卡地。推荐螺蛳粉、瓦香鸡、鸭血粉丝汤、黑椒牛柳意面、鸡公煲。紧邻商业街，用餐后可逛。'},
+  {id:50,name:'物理学院',cat:'college',lat:34.814935,lng:113.539072,r:40,
+   sum:'中科院院士领衔，物理学一级博士点，承建河南首个大科学装置中原之光。',
+   desc:'物理学院前身为1956年霍秉权先生创办的物理系，2019年更名，与中原之光实验室一体化运行。拥有凝聚态物理国家重点学科、物理学一级博士点和博士后流动站。中科院院士2人，国家杰青等国家级人才20余人。物理学科ESI全球排名3.80‰。承建河南省首个大科学装置——超短超强激光平台中原之光（占地75亩）。设钱三强英才班、尚光菁英班。金刚石CVD工艺服务河南超硬材料千亿产业链。',
+   onMap:true},
+  {id:51,name:'化学学院',cat:'college',lat:34.814399,lng:113.539248,r:40,
+   sum:'国家双一流建设学科，ESI全球前0.1‰，中科院院士3人。',
+   desc:'化学学院始建于1956年，是郑大最早建立的三个院系之一。中国科学院院士吴养洁、麦松威、常俊标3人领衔，国家级人才20余人。化学学科2017年入选国家双一流建设序列，2022年续选。ESI全球排名0.103‰（第26位），自然指数全球第28位。标志性成果：常俊标院士团队研发我国首个抗新冠口服药阿兹夫定，获中国专利金奖。共建抗病毒药物全国重点实验室、平原实验室。'},
+  {id:52,name:'计算机与人工智能学院',cat:'college',lat:34.816653,lng:113.535518,r:45,
+   sum:'涵盖计算机科学与技术、软件工程、人工智能等本科专业，以及计算机科学与技术、软件工程、人工智能与高性能计算等硕士博士专业',
+   desc:'计算机与人工智能学院成立于2019年，与软件学院、国家超级计算郑州中心合署一体化建设。前身可追溯至1956年，是河南省最早建设的计算机类专业。计算机科学ESI全球前1%（河南唯一）。拥有软件工程博士后流动站、3个博士点。加拿大工程院院士杨天若、国家杰青徐明亮等国家级人才40余人。超算中心嵩山超级计算机峰值世界前五国内第二。与中科曙光、超聚变等共建产学研融合体。',
+   onMap:true},
+];
+
+/* ===== 模拟用户位置：钟楼（真实触发引擎与用户 Marker 共用数据源） ===== */
+const MOCK_USER={lat:34.8171,lng:113.5373};
+/* 快捷模拟点（真实来源：map.tsx QUICK_POINTS） */
+const QUICK=[
+  {label:'钟楼',lat:34.8179,lng:113.5373},{label:'南门',lat:34.8085,lng:113.5355},
+  {label:'图书馆',lat:34.8184,lng:113.5387},{label:'眉湖',lat:34.8170,lng:113.5336},
+  {label:'厚山',lat:34.8221,lng:113.5354},{label:'樱花林',lat:34.8160,lng:113.5343},
+];
+
+/* ===== 工具（真实来源：utils/distance.ts haversine） ===== */
+function hav(a,b){const R=6371000,toR=d=>d*Math.PI/180,dlat=toR(b.lat-a.lat),dlng=toR(b.lng-a.lng),s=Math.sin(dlat/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dlng/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
+function fmtDist(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km';}
+function fmtDist2(m){return m<1000?'约 '+Math.round(m)+'m':'约 '+(m/1000).toFixed(1)+'km';}
+/* 地图投影：lat/lng → 示意底图坐标（米/像素 ≈3.05） */
+const LNG0=113.529,LNG1=113.542,LAT0=34.807,LAT1=34.827,MPP=3.05;
+function proj(lat,lng){return{x:(lng-LNG0)/(LNG1-LNG0)*390,y:(LAT1-lat)/(LAT1-LAT0)*726};}
+
+/* ===== 状态 ===== */
+const state={
+  tab:'map',
+  expanded:new Set(['college']),   // 预览便利：预展开首分类；真实默认全部收起
+  statusIdx:3,                    // 0无 1同步中 2精度不足 3精度一般 4模拟定位
+  syncBar:false, detailId:null, prevTab:'list',
+  mockLocation:null, debugOpen:false, mockVisible:false,
+  fencesOn:true, audioPlaying:false,
+};
+const STATUS=[
+  {k:'none'}, {k:'syncing',cls:'info',txt:'⏳ 正在同步景点数据...'},
+  {k:'poor',cls:'warn',txt:'⚠ 定位精度不足（当前 85m，需 ≤50m），自动触发已暂停'},
+  {k:'fair',cls:'fair',txt:'◐ 定位精度一般（35m），可能偶发误触发'},
+  {k:'mock',cls:'mock'},
+];
+
+/* ===== 渲染 ===== */
+function render(){
+  $('viewMap').classList.toggle('active',state.tab==='map');
+  $('viewList').classList.toggle('active',state.tab==='list');
+  $('viewDetail').classList.toggle('active',state.tab==='detail');
+  // 详情页为 Stack 页面，覆盖 (tabs)，真实 App 中不显示底部 Tab
+  document.querySelector('.tabbar').style.display=state.tab==='detail'?'none':'flex';
+  document.querySelectorAll('.tab-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  renderOverlay(); renderStatus(); renderList(); renderDetail(); renderMock(); renderDebug();
+}
+function renderStatus(){
+  const wrap=$('mapStatus'); wrap.style.pointerEvents='auto';
+  const s=STATUS[state.statusIdx];
+  if(s.k==='none'){wrap.innerHTML='';return;}
+  if(s.k==='mock'){
+    const m=state.mockLocation||MOCK_USER;
+    wrap.innerHTML='<div class="status-pill status-pill--mock">⚠️ 模拟定位中：'+m.lat.toFixed(5)+', '+m.lng.toFixed(5)+'（真实 GPS 已忽略）</div>';
+  }else{
+    wrap.innerHTML='<div class="status-pill status-pill--'+s.cls+'">'+s.txt+'</div>';
+  }
+}
+function renderOverlay(){
+  const g=$('mapOverlay'); if(!g) return; let h='';
+  if(state.fencesOn){
+    for(const s of SPOTS){
+      if(!s.fence) continue;
+      const p=proj(s.lat,s.lng);
+      if(s.fence==='circle'){
+        h+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+Math.max(6,(s.r/MPP)).toFixed(1)+'" fill="rgba(26,122,90,0.15)" stroke="rgba(26,122,90,0.45)" stroke-width="1.5"/>';
+      }else if(s.fence==='poly'||s.fence==='corr'){
+        const pts=s.poly.map(q=>{const pp=proj(q.lat,q.lng);return pp.x.toFixed(1)+','+pp.y.toFixed(1);}).join(' ');
+        h+=(s.fence==='poly'
+          ?'<polygon points="'+pts+'" fill="rgba(26,122,90,0.15)" stroke="rgba(26,122,90,0.45)" stroke-width="1.5"/>'
+          :'<polyline points="'+pts+'" fill="none" stroke="rgba(26,122,90,0.45)" stroke-width="2.5"/>');
+      }
+    }
+  }
+  for(const s of SPOTS){
+    if(!s.onMap) continue;
+    const p=proj(s.lat,s.lng);
+    h+='<g class="map-marker" data-id="'+s.id+'" transform="translate('+p.x.toFixed(1)+','+(p.y.toFixed(1)-4)+')" style="cursor:pointer">'
+      +'<path d="M0 -26 C-10 -26 -16 -18 -16 -10 C-16 -1 0 12 0 12 C0 12 16 -1 16 -10 C16 -18 10 -26 0 -26 Z" fill="#1B9CFC" stroke="#fff" stroke-width="1.6"/>'
+      +'<circle cy="-10" r="5.5" fill="#fff"/></g>';
+  }
+  const u=state.mockLocation||MOCK_USER, pu=proj(u.lat,u.lng);
+  h+='<g transform="translate('+pu.x.toFixed(1)+','+pu.y.toFixed(1)+')"><circle r="11" fill="rgba(26,122,90,0.25)" stroke="#fff" stroke-width="2"/><circle r="5" fill="#1A7A5A"/></g>';
+  g.innerHTML=h;
+}
+function renderList(){
+  const el=$('listScroll'); const L=[]; const user=MOCK_USER;
+  if(state.syncBar) L.push('<div class="syncbar"><p>⚠ 无法连接服务器，请检查网络后下拉刷新</p></div>');
+  const grouped={}; for(const s of SPOTS){(grouped[s.cat]=grouped[s.cat]||[]).push(s);}
+  for(const c of CATS){
+    const arr=grouped[c.key]||[]; if(!arr.length) continue;
+    arr.sort((a,b)=>hav(user,a)-hav(user,b));
+    const open=state.expanded.has(c.key);
+    L.push('<div class="acc-header '+(open?'open':'')+'" data-cat="'+c.key+'" style="border-left-color:'+c.color+'">'
+      +'<span class="ah-text">'+c.label+' ('+arr.length+')</span><span class="ah-arrow">▶</span></div>');
+    if(open){
+      for(const s of arr){
+        const d=hav(user,s);
+        L.push('<div class="spot-row"><div class="spot-dot" style="background:'+c.color+'"></div>'
+          +'<div class="spot-card" data-id="'+s.id+'"><img class="sc-img" src="assets/icon.png" alt="">'
+          +'<div class="sc-stripe"></div><div class="sc-body"><div class="sc-name">'+s.name+'</div>'
+          +'<div class="sc-summary">'+s.sum+'</div><div class="dist-pill">'+fmtDist(d)+'</div></div></div></div>');
+      }
+    }
+  }
+  if(!L.length) L.push('<div class="list-empty"><div class="le-icon">🗺️</div><div class="le-hint">暂无景点数据</div><div class="le-refresh">↓ 下拉刷新从服务器同步</div></div>');
+  el.innerHTML=L.join('');
+}
+function renderDetail(){
+  const el=$('detailScroll'); const s=SPOTS.find(x=>x.id===state.detailId);
+  if(!s){el.innerHTML='';return;}
+  const d=hav(MOCK_USER,s); const playing=state.audioPlaying;
+  const back='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  let btn='';
+  if(s.audio!==false){
+    btn=playing
+      ?'<button class="play-btn active" id="playBtn"><svg width="18" height="18" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>停止播放</button>'
+      :'<button class="play-btn" id="playBtn"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>播放语音讲解</button>';
+  }else{
+    btn='<div class="audio-hint"><div class="ah1">📝 该景点暂无语音导览</div><div class="ah2">请连接服务器后下拉刷新同步最新数据</div></div>';
+  }
+  el.innerHTML='<div class="detail-header"><button class="dh-back" id="backBtn">'+back+'</button><div class="dh-title">'+s.name+'</div></div>'
+    +'<img class="detail-hero" src="assets/icon.png" alt="">'
+    +'<div class="detail-body"><div class="dp-pill"><span class="dp-dot"></span>距您 '+fmtDist2(d)+'</div>'
+    +'<div class="detail-name">'+s.name+'</div>'
+    +'<div class="sec"><div class="sec-label">简介</div><div class="sec-summary">'+s.sum+'</div></div>'
+    +'<div class="sec"><div class="sec-label">详细介绍</div><div class="sec-text">'+s.desc+'</div></div>'
+    +btn+'</div>';
+}
+function row(l,v){return '<div class="debug-row"><div class="dl">'+l+'</div><div class="dv">'+v+'</div></div>';}
+function renderDebug(){
+  const body=$('debugBody'); $('debugArrow').textContent=state.debugOpen?'▾':'▸';
+  body.style.display=state.debugOpen?'block':'none';
+  if(!state.debugOpen) return;
+  const m=state.mockLocation||MOCK_USER;
+  body.innerHTML=row('坐标',m.lat.toFixed(5)+', '+m.lng.toFixed(5))
+    +row('精度','12m · good'+(state.mockLocation?'（模拟）':''))
+    +row('门控','可触发')
+    +row('最近景点','钟楼 · d=-8m · 圆形')
+    +row('引擎','冷却0 · 队列0 · 当前钟楼')
+    +row('触发记录','南大门 → 五星广场 → 钟楼');
+}
+function renderMock(){
+  const el=$('mockPanel');
+  if(!state.mockVisible){el.innerHTML='';return;}
+  const m=state.mockLocation;
+  el.innerHTML='<div class="mock-panel"><h4>🧪 模拟定位调试</h4>'
+    +'<div class="mock-label">快捷定位</div><div class="mock-quick">'
+    +QUICK.map(q=>'<button class="mock-qbtn" data-q="'+q.lat+','+q.lng+'">'+q.label+'</button>').join('')+'</div>'
+    +'<div class="mock-label">自定义坐标（GCJ-02）</div>'
+    +'<div class="mock-inputrow"><input class="mock-input" id="mockLat" placeholder="纬度 lat" value="'+(m?m.lat.toFixed(5):'')+'">'
+    +'<input class="mock-input" id="mockLng" placeholder="经度 lng" value="'+(m?m.lng.toFixed(5):'')+'">'
+    +'<button class="mock-apply" id="mockApply">定位</button></div>'
+    +(m?'<button class="mock-clear" id="mockClear">✕ 清除模拟定位，恢复真实 GPS</button>':'')
+    +'<button class="mock-close" id="mockClose">关闭面板</button></div>';
+}
+function showConfirm(lat,lng){
+  $('modal').innerHTML='<div class="modal-mask"><div class="modal-box"><h4>启用模拟定位</h4>'
+    +'<p>将忽略真实 GPS，使用坐标 ('+lat.toFixed(5)+', '+lng.toFixed(5)+')。仅用于演示/调试，确定继续？</p>'
+    +'<div class="modal-actions"><button class="btn-cancel" id="mCancel">取消</button><button class="btn-ok" id="mOk">确定</button></div></div></div>';
+  $('mCancel').onclick=()=>{$('modal').innerHTML='';};
+  $('mOk').onclick=()=>{state.mockLocation={lat,lng};$('modal').innerHTML='';render();};
+}
+let triggerTimer=null;
+function showTrigger(){
+  const el=$('triggerCard');
+  el.innerHTML='<div class="trigger-card"><div class="tc-info"><div class="tc-tag">▶ 正在讲解</div><div class="tc-name">钟楼 · 求是担当</div></div>'
+    +'<button class="tc-stop" id="tcStop"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>停止播放</button></div>';
+  const stop=$('tcStop'); if(stop) stop.onclick=hideTrigger;
+  if(triggerTimer) clearTimeout(triggerTimer);
+  triggerTimer=setTimeout(hideTrigger,4000);
+}
+function hideTrigger(){$('triggerCard').innerHTML='';}
+let toastTimer=null;
+function showToast(type,text,act){
+  const el=$('toastWrap');
+  el.innerHTML='<div class="toast toast--'+type+'"><span class="toast-text">'+text+'</span><span class="toast-act">'+act+'</span></div>';
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.innerHTML='';},type==='error'?4000:3000);
+}
+
+/* ===== 事件 ===== */
+document.querySelectorAll('.tab-item').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.detailId=null;render();});
+$('mapStatus').addEventListener('click',e=>{
+  if(!e.target.closest('.status-pill')) return;
+  state.statusIdx=(state.statusIdx+1)%STATUS.length;
+  if(state.statusIdx===4 && !state.mockLocation) state.mockLocation={...MOCK_USER};
+  render();
+});
+$('listScroll').addEventListener('click',e=>{
+  const h=e.target.closest('.acc-header');
+  if(h){const k=h.dataset.cat; state.expanded.has(k)?state.expanded.delete(k):state.expanded.add(k); render(); return;}
+  const c=e.target.closest('.spot-card');
+  if(c){state.detailId=+c.dataset.id; state.prevTab=state.tab; state.tab='detail'; render();}
+});
+$('detailScroll').addEventListener('click',e=>{
+  if(e.target.closest('#backBtn')){state.tab=state.prevTab;state.detailId=null;render();return;}
+  if(e.target.closest('#playBtn')){state.audioPlaying=!state.audioPlaying;render();}
+});
+$('fenceToggle').onclick=()=>{state.fencesOn=!state.fencesOn;render();};
+$('recenterBtn').onclick=()=>{const b=$('recenterBtn');b.style.transition='transform .25s';b.style.transform='scale(1.16)';setTimeout(()=>{b.style.transform='';},250);};
+let tapN=0,tapT=null;
+$('debugTrigger').onclick=()=>{
+  tapN++;
+  if(tapT) clearTimeout(tapT);
+  if(tapN>=5){tapN=0;state.mockVisible=!state.mockVisible;render();}
+  else tapT=setTimeout(()=>{tapN=0;},1500);
+};
+$('debugHead').onclick=()=>{state.debugOpen=!state.debugOpen;renderDebug();};
+$('mockPanel').addEventListener('click',e=>{
+  const q=e.target.closest('[data-q]');
+  if(q){const v=q.dataset.q.split(',').map(Number);showConfirm(v[0],v[1]);return;}
+  if(e.target.closest('#mockApply')){
+    const la=parseFloat(($('mockLat')||{}).value),ln=parseFloat(($('mockLng')||{}).value);
+    if(!isNaN(la)&&!isNaN(ln)&&la>=-90&&la<=90&&ln>=-180&&ln<=180) showConfirm(la,ln);
+    return;
+  }
+  if(e.target.closest('#mockClear')){state.mockLocation=null;state.statusIdx=0;render();return;}
+  if(e.target.closest('#mockClose')){state.mockVisible=false;render();}
+});
+document.querySelectorAll('[data-demo]').forEach(ch=>ch.onclick=()=>{
+  const k=ch.dataset.demo;
+  if(k==='status'){state.statusIdx=(state.statusIdx+1)%STATUS.length;if(state.statusIdx===4&&!state.mockLocation)state.mockLocation={...MOCK_USER};render();}
+  if(k==='syncbar'){state.syncBar=!state.syncBar;ch.classList.toggle('on',state.syncBar);state.tab='list';render();}
+  if(k==='trigger'){showTrigger();}
+  if(k==='toast-err'){showToast('error','语音播放失败，请检查网络','点此重试');}
+  if(k==='toast-hint'){showToast('hint','发现新景点：太和柱 · 距您 260m','点此切换');}
+});
+const mapSvg=$('viewMap').querySelector('.map-svg');
+mapSvg.addEventListener('click',e=>{
+  const m=e.target.closest('.map-marker');
+  if(m){state.detailId=+m.dataset.id;state.prevTab='map';state.tab='detail';render();}
+});
+
+render();
+</script>
+</body>
+</html>

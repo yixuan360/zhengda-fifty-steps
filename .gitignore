@@ -50,3 +50,9 @@ Thumbs.db
 # 媒体文件（可选，大文件可以不同步）
 server/media/*
 !server/media/.gitkeep
+
+# Django collectstatic 产物（服务器部署时生成，见 deploy/deploy.sh）
+server/staticfiles/
+
+# 比赛内部资料（申报表、任务清单，不公开）
+zzu_agent/
