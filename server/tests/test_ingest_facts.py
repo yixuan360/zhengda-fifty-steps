@@ -231,6 +231,9 @@ def test_ingest_prompts_are_chinese_and_include_description(spot, llm):
     assert '事实卡片' in call['system']
     assert '只能' in call['system']
     assert 'source_refs' in call['system']
+    assert '至少产出 1 张 depth=1' in call['system']
+    assert 'academy 仅限学科设置' in call['system']
+    assert '校训、题词、历史事件、建设沿革一律归 history' in call['system']
     assert '景点介绍' in call['user']
     assert spot.description in call['user']
 
@@ -251,9 +254,10 @@ def test_ingest_skips_invalid_cards_and_warns(spot, llm, capsys):
     assert '3 条非法卡片被跳过' in captured.err
 
 
-def test_ingest_dedupes_same_dimension_and_depth_keeping_longest(spot, llm):
-    short_text = '钟楼是标志性建筑。'
-    long_text = '钟楼是郑州大学主校区的标志性建筑，也是校徽图案的原型。'
+def test_ingest_dedupes_only_contained_facts(spot, llm):
+    """一条完整包含另一条的核心信息时，只保留较长者。"""
+    short_text = '钟楼是主校区制高点。'
+    long_text = '钟楼是主校区制高点，高 56 米。'
     llm['payload'] = {'cards': [
         make_card(depth=2, fact_text=short_text),
         make_card(depth=2, fact_text=long_text),
@@ -264,6 +268,63 @@ def test_ingest_dedupes_same_dimension_and_depth_keeping_longest(spot, llm):
     items = KnowledgeItem.objects.filter(spot=spot)
     assert items.count() == 1
     assert items.get().fact_text == long_text
+
+
+def test_ingest_keeps_distinct_facts_at_same_depth(spot, llm):
+    """同层不同事实必须并存，不再按“最长一条”误删。"""
+    llm['payload'] = {'cards': [
+        make_card(depth=2, fact_text='钟楼采用红砖外立面。'),
+        make_card(depth=2, fact_text='钟楼每小时准时鸣钟。'),
+    ]}
+
+    call_command('ingest_facts', '--spot-id', str(spot.id))
+
+    items = KnowledgeItem.objects.filter(spot=spot)
+    assert items.count() == 2
+    assert set(items.values_list('fact_text', flat=True)) == {
+        '钟楼采用红砖外立面。',
+        '钟楼每小时准时鸣钟。',
+    }
+
+
+def test_ingest_dedupes_near_identical_paraphrases(spot, llm):
+    llm['payload'] = {'cards': [
+        make_card(depth=2, fact_text='钟楼是主校区的制高点。'),
+        make_card(depth=2, fact_text='钟楼是主校区制高点。'),
+    ]}
+
+    call_command('ingest_facts', '--spot-id', str(spot.id))
+
+    assert KnowledgeItem.objects.filter(spot=spot).count() == 1
+
+
+def test_ingest_keeps_facts_with_different_numbers(spot, llm):
+    """高度相似但数字不同，属于不同事实，不能去重。"""
+    llm['payload'] = {'cards': [
+        make_card(depth=2, fact_text='钟楼总高度为 56 米，是主校区制高点。'),
+        make_card(depth=2, fact_text='钟楼总高度为 58 米，是主校区制高点。'),
+    ]}
+
+    call_command('ingest_facts', '--spot-id', str(spot.id))
+
+    assert KnowledgeItem.objects.filter(spot=spot).count() == 2
+
+
+def test_ingest_reports_depth1_coverage(spot, llm, capsys):
+    llm['payload'] = {'cards': [
+        make_card(dimension='nature', depth=1, fact_text='自然概览'),
+        make_card(dimension='history', depth=1, fact_text='历史概览'),
+        make_card(dimension='architecture', depth=2, fact_text='建筑细节'),
+    ]}
+
+    call_command('ingest_facts', '--spot-id', str(spot.id))
+
+    captured = capsys.readouterr()
+    assert 'nature（自然山水）：有' in captured.out
+    assert 'architecture（建筑肌理）：无' in captured.out
+    assert 'academy（学科人文）：无' in captured.out
+    assert 'history（校史城史）：有' in captured.out
+    assert 'depth=1 概览层未覆盖：architecture、academy' in captured.err
 
 
 def test_ingest_dry_run_prints_jsonl_without_writing(spot, llm, capsys):
