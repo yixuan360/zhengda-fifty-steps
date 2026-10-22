@@ -212,11 +212,12 @@ export interface NarrativeNext {
 
 **Files:**
 - Create: `server/apps/narrative/llm_client.py`、`management/commands/ingest_facts.py`、`management/commands/enrich_sources.py`
+- Modify: `server/requirements.txt`（追加 `openai>=1.0`）、`server/apps/narrative/admin.py`（`has_delete_permission → False`，封物理删除）、`server/tests/test_narrative.py`
 - Test: `server/tests/test_ingest_facts.py`
 
 **Interfaces:**
 - Consumes: T1 模型、T2 `upsert_item`（approved 后可手动跑 publish_vector）
-- Produces: `llm_client.py` 暴露 `chat_json(system_prompt, user_prompt, schema) -> dict`（OpenAI 兼容接口，base_url/api_key/model 从 env `NARRATIVE_LLM_BASE_URL/NARRATIVE_LLM_API_KEY/NARRATIVE_LLM_MODEL` 读取，缺 key 时抛明确异常）；ingest 命令输出 JSONL 候选卡片（`--dry-run` 只打印不入库）；enrich 命令对 pending 卡片补 source_refs。
+- Produces: `llm_client.py` 暴露 `chat_json(system_prompt, user_prompt, schema) -> dict`（OpenAI 兼容接口，经 python-decouple 读 `server/.env` 的 `NARRATIVE_LLM_BASE_URL/NARRATIVE_LLM_API_KEY/NARRATIVE_LLM_MODEL`，缺 key 时抛明确异常；json_schema 被拒时回退 json_object + 代码内 schema 校验）；ingest 命令输出 JSONL 候选卡片（`--dry-run` 只打印不入库，行内带 spot_id/spot_name 便于批量预览）；enrich 命令 `enrich_sources --spot-id（可重复，必填）` 对 pending 卡片补 source_refs。
 
 - [ ] LLM 客户端（OpenAI SDK `chat.completions`，response_format json_schema，超时 60s，重试 1 次）
 - [ ] ingest_facts：输入 Spot.description（+可选 xlsx 文本），Prompt 要求拆成候选卡片 `[{dimension, depth(1~5), fact_text, source_refs:[{title,url}] , confidence}]`，逐条入 KnowledgeItem(status=pending, created_by='ai')
