@@ -1,3 +1,5 @@
+> 【已归档 · 方案已否决】本文档是 2026-08-07“轨迹感知 / 方向置信度”MVP 的执行计划。该方案已于 2026-08-08 评审否决并从代码完整移除（commit 9fda104），现行引擎为“区域内即播”（纯进出围栏判定 + 滞回 + 冷却），见 docs/superpowers/specs/2026-08-07-spatial-trigger-design.md v1.3 与《docs/项目现状说明.md》。
+>
 # 轨迹感知空间语义触发层 — MVP 实现计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
