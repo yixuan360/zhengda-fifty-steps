@@ -116,6 +116,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# ── 文脉叙事引擎：Chroma 持久化向量库目录 ─────────────
+NARRATIVE_VECTOR_DIR = env_config(
+    'NARRATIVE_VECTOR_DIR', default=str(BASE_DIR / 'vector_db'),
+)
+
 # ── 默认主键 ─────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

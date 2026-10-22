@@ -14,6 +14,9 @@ gunicorn>=23.0
 # TTS 音频生成
 edge-tts>=7.0
 
+# 文脉叙事引擎：向量库（T2 起）
+chromadb>=1.0
+
 # 测试
 pytest>=8.0
 pytest-django>=4.0
