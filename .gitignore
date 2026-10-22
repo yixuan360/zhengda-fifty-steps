@@ -57,5 +57,9 @@ server/staticfiles/
 # 文脉叙事引擎：Chroma 持久化向量库（运行时生成，不入库）
 server/vector_db/
 
+# 文脉叙事 Agent 服务运行时
+agent_service/media_cache/
+agent.env
+
 # 比赛内部资料（申报表、任务清单，不公开）
 zzu_agent/
