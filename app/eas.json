@@ -15,6 +15,19 @@
         "EXPO_PUBLIC_ENABLE_DEBUG": "true"
       }
     },
+    "narrative-dev": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "narrative-dev",
+      "env": {
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "e7171cce2b78edd39bbd690b0be83ab3",
+        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.43.4:8000",
+        "EXPO_PUBLIC_AGENT_BASE_URL": "http://192.168.43.4:8100",
+        "EXPO_PUBLIC_NARRATIVE_ENABLED": "true",
+        "EXPO_PUBLIC_ENABLE_DEBUG": "true"
+      }
+    },
     "production": {
       "android": {
         "buildType": "apk"

@@ -8,13 +8,19 @@ import time
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from .generate import fallback_response, generate_narrative
+from .generate import MEDIA_CACHE, fallback_response, generate_narrative
 from .schemas import NarrativeRequest, NarrativeResponse
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title='郑大五十步·文脉叙事服务', version='0.1.0')
+
+# 本地直连（真机局域网测试）没有 nginx，由 Agent 自身提供合成音频；
+# 生产环境 nginx 的 /narrative-media/ location 仍优先于本服务。
+MEDIA_CACHE.mkdir(parents=True, exist_ok=True)
+app.mount('/narrative-media', StaticFiles(directory=str(MEDIA_CACHE)), name='narrative-media')
 
 # Expo 开发源（localhost / 模拟器 / 局域网真机）
 app.add_middleware(
