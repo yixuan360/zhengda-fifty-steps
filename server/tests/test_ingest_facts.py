@@ -494,6 +494,56 @@ def test_enrich_is_idempotent(spot, llm):
     assert item.confidence == 'cross'
 
 
+def test_enrich_approved_status_upgrades_to_cross(spot, llm):
+    """--status approved：人审通过的卡片同样可补源并升 cross。"""
+    item = make_item(spot, status='approved', source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学校史馆', 'url': 'https://xsg.zzu.edu.cn/'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id), '--status', 'approved')
+
+    item.refresh_from_db()
+    assert len(item.source_refs) == 2
+    assert item.confidence == 'cross'
+    assert item.status == 'approved'
+
+
+def test_enrich_default_status_ignores_approved(spot, llm):
+    """默认 pending 模式行为不变：已发布卡片不处理。"""
+    approved = make_item(spot, status='approved', fact_text='已发布卡片')
+    pending = make_item(spot, fact_text='待审卡片')
+    llm['payload'] = {'sources': [
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    approved.refresh_from_db()
+    pending.refresh_from_db()
+    assert approved.source_refs == []
+    assert approved.confidence == 'single'
+    assert len(pending.source_refs) == 1
+    assert len(llm['calls']) == 1
+
+
+def test_enrich_reports_when_no_cards_match_status(spot, llm, capsys):
+    make_item(spot, status='approved')
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    assert llm['calls'] == []
+    assert '没有「待审」状态的卡片需要补源' in capsys.readouterr().out
+
+
+def test_enrich_reports_when_spot_has_no_cards(llm, capsys):
+    call_command('enrich_sources', '--spot-id', '999999', '--status', 'approved')
+
+    assert llm['calls'] == []
+    assert '没有「已发布」状态的卡片需要补源' in capsys.readouterr().out
+
+
 def test_enrich_all_failures_raise(spot, llm):
     make_item(spot)
     llm['error'] = RuntimeError('上游不可用')

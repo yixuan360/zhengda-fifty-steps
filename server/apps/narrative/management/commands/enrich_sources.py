@@ -3,8 +3,10 @@ T3 — 为待审事实卡片补充可核验的公开来源。
 
 用法：
     python manage.py enrich_sources --spot-id 12
+    python manage.py enrich_sources --spot-id 12 --status approved
 
-只处理 status=pending 的卡片；原为单源、本次又补到来源的卡片升级为 cross。
+默认处理 status=pending 的卡片；--status approved 可对人审通过的卡片补源。
+合并后来源数 >= 2 升级为 cross，= 1 保持 single，confidence=human 不改。
 """
 from django.core.management.base import BaseCommand, CommandError
 
@@ -99,24 +101,38 @@ def _merge_sources(existing, additions):
     return merged
 
 
+STATUS_LABELS = {
+    'pending': '待审',
+    'approved': '已发布',
+}
+
+
 class Command(BaseCommand):
-    help = '为待审事实卡片补充公开可核验来源，并更新 confidence。'
+    help = '为事实卡片补充公开可核验来源，并更新 confidence。'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--spot-id', dest='spot_id', action='append', type=int,
             required=True, help='景点 id，可重复传入',
         )
+        parser.add_argument(
+            '--status', choices=list(STATUS_LABELS), default='pending',
+            help='处理的卡片状态（默认 pending，可选 approved）',
+        )
 
     def handle(self, *args, **options):
         spot_ids = options['spot_id']
+        status = options['status']
         items = list(
             KnowledgeItem.objects
-            .filter(spot_id__in=spot_ids, status='pending')
+            .filter(spot_id__in=spot_ids, status=status)
             .order_by('id')
         )
         if not items:
-            self.stdout.write('没有待审卡片需要补源。')
+            label = STATUS_LABELS[status]
+            self.stdout.write(
+                f'没有「{label}」状态的卡片需要补源（景点 {spot_ids}）。'
+            )
             return
 
         updated = 0
