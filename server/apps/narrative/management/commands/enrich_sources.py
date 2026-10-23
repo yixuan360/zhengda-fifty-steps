@@ -9,6 +9,8 @@ T3 — 为待审事实卡片补充可核验的公开来源。
 LLM 返回的来源先做 URL 可达性校验（仅保留 2xx），再合并入库。
 合并后可达来源数 >= 2 升级为 cross，= 1 保持 single，confidence=human 不改。
 """
+from urllib.parse import urlparse
+
 import requests
 from django.core.management.base import BaseCommand, CommandError
 
@@ -119,16 +121,32 @@ def _is_url_reachable(url):
         return False
 
 
+def _is_homepage_url(url):
+    """纯首页 URL：解析后 path 为空或仅为 "/"。"""
+    try:
+        return urlparse(url).path in ('', '/')
+    except ValueError:
+        return True
+
+
 def _filter_reachable_sources(sources):
-    """丢弃不可达来源（404/403/超时等），返回 (可达来源, 丢弃数)。"""
+    """丢弃不可达与纯首页来源。
+
+    返回 (可达且具体页面的来源, 不可达数, 纯首页数)。
+    """
     reachable = []
-    dropped = 0
+    unreachable = 0
+    homepage = 0
     for source in sources:
-        if _is_url_reachable(source['url']):
-            reachable.append(source)
-        else:
-            dropped += 1
-    return reachable, dropped
+        url = source['url']
+        if not _is_url_reachable(url):
+            unreachable += 1
+            continue
+        if _is_homepage_url(url):
+            homepage += 1
+            continue
+        reachable.append(source)
+    return reachable, unreachable, homepage
 
 
 def _merge_sources(existing, additions):
@@ -200,11 +218,15 @@ class Command(BaseCommand):
                 continue
 
             candidates = _clean_sources(_extract_sources(payload))
-            additions, dropped = _filter_reachable_sources(candidates)
-            dropped_total += dropped
-            if dropped:
+            additions, unreachable, homepage = _filter_reachable_sources(candidates)
+            dropped_total += unreachable + homepage
+            if unreachable:
                 self.stderr.write(self.style.WARNING(
-                    f'卡片 #{item.id}：{dropped} 个来源 URL 不可达，已丢弃'
+                    f'卡片 #{item.id}：{unreachable} 个来源 URL 不可达，已丢弃'
+                ))
+            if homepage:
+                self.stderr.write(self.style.WARNING(
+                    f'卡片 #{item.id}：{homepage} 个来源为纯首页 URL，已丢弃'
                 ))
 
             old_refs = [ref for ref in item.source_refs if isinstance(ref, dict)]

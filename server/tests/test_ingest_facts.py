@@ -79,7 +79,7 @@ def make_card(**overrides):
         'depth': 1,
         'fact_text': '钟楼是郑州大学主校区的标志性建筑。',
         'source_refs': [
-            {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+            {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
         ],
         'confidence': 'single',
     }
@@ -411,7 +411,7 @@ def test_ingest_multiple_spots(spot, other_spot, llm):
 
 def test_enrich_merges_sources_and_upgrades_confidence(spot, llm):
     item = make_item(spot, source_refs=[
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ])
     llm['payload'] = {'sources': [
         {'title': '郑州大学校史馆', 'url': 'https://history.zzu.edu.cn/zhonglou'},
@@ -427,7 +427,7 @@ def test_enrich_merges_sources_and_upgrades_confidence(spot, llm):
 def test_enrich_upgrades_zero_source_card_with_two_sources(spot, llm):
     item = make_item(spot, source_refs=[])
     llm['payload'] = {'sources': [
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
         {'title': '郑州大学校史馆', 'url': 'https://history.zzu.edu.cn/zhonglou'},
     ]}
 
@@ -441,7 +441,7 @@ def test_enrich_upgrades_zero_source_card_with_two_sources(spot, llm):
 def test_enrich_keeps_single_with_only_one_added_source(spot, llm):
     item = make_item(spot, source_refs=[])
     llm['payload'] = {'sources': [
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ]}
 
     call_command('enrich_sources', '--spot-id', str(spot.id))
@@ -453,7 +453,7 @@ def test_enrich_keeps_single_with_only_one_added_source(spot, llm):
 
 def test_enrich_keeps_single_when_no_new_source(spot, llm):
     item = make_item(spot, source_refs=[
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ])
     llm['payload'] = {'sources': []}
 
@@ -466,10 +466,10 @@ def test_enrich_keeps_single_when_no_new_source(spot, llm):
 
 def test_enrich_drops_duplicate_and_malformed_sources(spot, llm):
     item = make_item(spot, source_refs=[
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ])
     llm['payload'] = {'sources': [
-        {'title': '重复来源', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '重复来源', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
         {'title': '缺链接'},
         {'title': '校史馆', 'url': 'https://history.zzu.edu.cn/zhonglou'},
     ]}
@@ -500,7 +500,7 @@ def test_enrich_only_touches_pending_items(spot, llm):
 
 def test_enrich_is_idempotent(spot, llm):
     make_item(spot, source_refs=[
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ])
     llm['payload'] = {'sources': [
         {'title': '校史馆', 'url': 'https://history.zzu.edu.cn/zhonglou'},
@@ -518,8 +518,8 @@ def test_enrich_approved_status_upgrades_to_cross(spot, llm):
     """--status approved：人审通过的卡片同样可补源并升 cross。"""
     item = make_item(spot, status='approved', source_refs=[])
     llm['payload'] = {'sources': [
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
-        {'title': '郑州大学校史馆', 'url': 'https://xsg.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
+        {'title': '郑州大学校史馆', 'url': 'https://xsg.zzu.edu.cn/zhonglou'},
     ]}
 
     call_command('enrich_sources', '--spot-id', str(spot.id), '--status', 'approved')
@@ -535,7 +535,7 @@ def test_enrich_default_status_ignores_approved(spot, llm):
     approved = make_item(spot, status='approved', fact_text='已发布卡片')
     pending = make_item(spot, fact_text='待审卡片')
     llm['payload'] = {'sources': [
-        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/'},
+        {'title': '郑州大学官网', 'url': 'https://www.zzu.edu.cn/xxgk/xxjj.htm'},
     ]}
 
     call_command('enrich_sources', '--spot-id', str(spot.id))
@@ -662,6 +662,39 @@ def test_enrich_recomputes_confidence_after_filtering(spot, llm, monkeypatch):
     item.refresh_from_db()
     assert len(item.source_refs) == 1
     assert item.confidence == 'single'
+
+
+def test_enrich_drops_homepage_url(spot, llm, monkeypatch, capsys):
+    """纯首页 URL（path 为空或 "/"）不可作为可核验来源。"""
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '站点首页', 'url': 'https://www.example.com/'},
+        {'title': '无路径', 'url': 'https://www.example.com'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert item.source_refs == []
+    assert item.confidence == 'single'
+    captured = capsys.readouterr()
+    assert '2 个来源为纯首页 URL' in captured.err
+    assert '丢弃不可达来源 2 个' in captured.out
+
+
+def test_enrich_keeps_url_with_path(spot, llm, monkeypatch):
+    _patch_url_status(monkeypatch, {'https://www.example.com/about/x': 200})
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '具体页面', 'url': 'https://www.example.com/about/x'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert [ref['url'] for ref in item.source_refs] == [
+        'https://www.example.com/about/x',
+    ]
 
 
 def test_enrich_falls_back_to_get_when_head_fails(spot, llm, monkeypatch):
