@@ -12,6 +12,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.narrative import llm_client
+from apps.narrative.management.commands import enrich_sources as enrich_command
 from apps.narrative.models import KnowledgeItem
 from apps.spots.models import Spot
 
@@ -31,6 +32,25 @@ def other_spot():
     return Spot.objects.create(
         name='眉湖', lat=34.8150, lng=113.5330,
         description='眉湖是郑州大学主校区的人工湖。',
+    )
+
+
+class FakeResponse:
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+    def close(self):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def reachable_requests(monkeypatch):
+    """默认所有来源 URL 可达（2xx），测试全程不联网。"""
+    monkeypatch.setattr(
+        enrich_command.requests, 'head', lambda *args, **kwargs: FakeResponse(200),
+    )
+    monkeypatch.setattr(
+        enrich_command.requests, 'get', lambda *args, **kwargs: FakeResponse(200),
     )
 
 
@@ -549,3 +569,115 @@ def test_enrich_all_failures_raise(spot, llm):
     llm['error'] = RuntimeError('上游不可用')
     with pytest.raises(CommandError, match='全部卡片补源失败'):
         call_command('enrich_sources', '--spot-id', str(spot.id))
+
+
+# ── 来源 URL 可达性校验 ──────────────────────────────────
+
+def _patch_url_status(monkeypatch, status_by_url):
+    """按 URL 返回指定状态码；未配置的 URL 视为 200。"""
+
+    def fake_request(url, *args, **kwargs):
+        return FakeResponse(status_by_url.get(url, 200))
+
+    monkeypatch.setattr(enrich_command.requests, 'head', fake_request)
+    monkeypatch.setattr(enrich_command.requests, 'get', fake_request)
+
+
+def test_enrich_keeps_reachable_source(spot, llm, monkeypatch):
+    _patch_url_status(monkeypatch, {'https://ok.example.com/a': 200})
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '可达来源', 'url': 'https://ok.example.com/a'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert [ref['url'] for ref in item.source_refs] == ['https://ok.example.com/a']
+    assert item.confidence == 'single'
+
+
+def test_enrich_drops_404_source(spot, llm, monkeypatch, capsys):
+    _patch_url_status(monkeypatch, {'https://ok.example.com/a': 404})
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '失效来源', 'url': 'https://ok.example.com/a'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert item.source_refs == []
+    captured = capsys.readouterr()
+    assert '1 个来源 URL 不可达' in captured.err
+    assert '丢弃不可达来源 1 个' in captured.out
+
+
+def test_enrich_drops_403_source(spot, llm, monkeypatch):
+    _patch_url_status(monkeypatch, {'https://baike.example.com/a': 403})
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '反爬来源', 'url': 'https://baike.example.com/a'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert item.source_refs == []
+    assert item.confidence == 'single'
+
+
+def test_enrich_drops_timeout_source(spot, llm, monkeypatch):
+    def timeout(*args, **kwargs):
+        raise enrich_command.requests.Timeout('timed out')
+
+    monkeypatch.setattr(enrich_command.requests, 'head', timeout)
+    monkeypatch.setattr(enrich_command.requests, 'get', timeout)
+
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '超时来源', 'url': 'https://slow.example.com/a'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert item.source_refs == []
+
+
+def test_enrich_recomputes_confidence_after_filtering(spot, llm, monkeypatch):
+    """两个来源只剩一个可达 → 不能升 cross。"""
+    _patch_url_status(monkeypatch, {
+        'https://ok.example.com/a': 200,
+        'https://dead.example.com/b': 404,
+    })
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '可达来源', 'url': 'https://ok.example.com/a'},
+        {'title': '失效来源', 'url': 'https://dead.example.com/b'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert len(item.source_refs) == 1
+    assert item.confidence == 'single'
+
+
+def test_enrich_falls_back_to_get_when_head_fails(spot, llm, monkeypatch):
+    """HEAD 返回 405 时回退 GET；GET 2xx 则保留。"""
+    monkeypatch.setattr(
+        enrich_command.requests, 'head', lambda *a, **k: FakeResponse(405),
+    )
+    monkeypatch.setattr(
+        enrich_command.requests, 'get', lambda *a, **k: FakeResponse(200),
+    )
+    item = make_item(spot, source_refs=[])
+    llm['payload'] = {'sources': [
+        {'title': '仅 GET 可用', 'url': 'https://head405.example.com/a'},
+    ]}
+
+    call_command('enrich_sources', '--spot-id', str(spot.id))
+
+    item.refresh_from_db()
+    assert len(item.source_refs) == 1

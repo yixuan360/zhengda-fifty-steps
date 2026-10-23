@@ -6,12 +6,20 @@ T3 — 为待审事实卡片补充可核验的公开来源。
     python manage.py enrich_sources --spot-id 12 --status approved
 
 默认处理 status=pending 的卡片；--status approved 可对人审通过的卡片补源。
-合并后来源数 >= 2 升级为 cross，= 1 保持 single，confidence=human 不改。
+LLM 返回的来源先做 URL 可达性校验（仅保留 2xx），再合并入库。
+合并后可达来源数 >= 2 升级为 cross，= 1 保持 single，confidence=human 不改。
 """
+import requests
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.narrative import llm_client
 from apps.narrative.models import KnowledgeItem
+
+URL_CHECK_TIMEOUT = 5
+BROWSER_UA = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+)
 
 SYSTEM_PROMPT = """你是郑州大学校史与校园文化的资料核验员。请为给定的事实陈述补充最多 2 个公开、可核验的来源。
 来源优先级依次为：校史馆或档案馆、学校官网、地方志、权威百科。
@@ -85,6 +93,44 @@ def _clean_sources(sources):
     return cleaned
 
 
+def _is_url_reachable(url):
+    """HEAD 优先，失败/非 2xx 回退 GET；仅 2xx 视为可达。"""
+    headers = {'User-Agent': BROWSER_UA}
+    try:
+        response = requests.head(
+            url, headers=headers, timeout=URL_CHECK_TIMEOUT,
+            allow_redirects=True,
+        )
+        if 200 <= response.status_code < 300:
+            return True
+    except requests.RequestException:
+        pass
+
+    try:
+        response = requests.get(
+            url, headers=headers, timeout=URL_CHECK_TIMEOUT,
+            allow_redirects=True, stream=True,
+        )
+        try:
+            return 200 <= response.status_code < 300
+        finally:
+            response.close()
+    except requests.RequestException:
+        return False
+
+
+def _filter_reachable_sources(sources):
+    """丢弃不可达来源（404/403/超时等），返回 (可达来源, 丢弃数)。"""
+    reachable = []
+    dropped = 0
+    for source in sources:
+        if _is_url_reachable(source['url']):
+            reachable.append(source)
+        else:
+            dropped += 1
+    return reachable, dropped
+
+
 def _merge_sources(existing, additions):
     """按 url（以及 title）去重后合并。"""
     merged = [ref for ref in existing if isinstance(ref, dict)]
@@ -138,6 +184,7 @@ class Command(BaseCommand):
         updated = 0
         failed = 0
         first_error = None
+        dropped_total = 0
 
         for item in items:
             try:
@@ -152,7 +199,14 @@ class Command(BaseCommand):
                 ))
                 continue
 
-            additions = _clean_sources(_extract_sources(payload))
+            candidates = _clean_sources(_extract_sources(payload))
+            additions, dropped = _filter_reachable_sources(candidates)
+            dropped_total += dropped
+            if dropped:
+                self.stderr.write(self.style.WARNING(
+                    f'卡片 #{item.id}：{dropped} 个来源 URL 不可达，已丢弃'
+                ))
+
             old_refs = [ref for ref in item.source_refs if isinstance(ref, dict)]
             merged = _merge_sources(old_refs, additions)
 
@@ -177,7 +231,8 @@ class Command(BaseCommand):
                 updated += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f'补源完成：处理 {len(items)} 条，更新 {updated} 条，失败 {failed} 条。'
+            f'补源完成：处理 {len(items)} 条，更新 {updated} 条，失败 {failed} 条，'
+            f'丢弃不可达来源 {dropped_total} 个。'
         ))
         if failed == len(items):
             raise CommandError(f'全部卡片补源失败：{first_error}')
