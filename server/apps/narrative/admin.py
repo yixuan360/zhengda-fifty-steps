@@ -14,7 +14,13 @@ from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils import timezone
 
-from .models import KnowledgeItem, NarrativeLog, ReviewTask
+from .models import (
+    DeepContent,
+    DeepContentLog,
+    KnowledgeItem,
+    NarrativeLog,
+    ReviewTask,
+)
 
 
 class ReviewTaskInline(admin.TabularInline):
@@ -182,3 +188,90 @@ class NarrativeLogAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request, 'admin/narrative/narrative_stats.html', context,
         )
+
+
+@admin.register(DeepContent)
+class DeepContentAdmin(admin.ModelAdmin):
+    """V2 深度稿人审队列：草稿/待人审 → 已发布/已驳回。"""
+
+    list_display = [
+        'id', 'spot', 'category', 'title', 'status', 'version',
+        'has_audio', 'reviewed_by', 'updated_at',
+    ]
+    list_display_links = ['id', 'title']
+    list_filter = ['status', 'category', 'spot']
+    search_fields = ['title', 'body']
+    ordering = ['spot_id', 'category']
+    readonly_fields = [
+        'version', 'audio_path', 'reviewed_by', 'created_at', 'updated_at',
+    ]
+    actions = ['approve_selected', 'reject_selected']
+
+    @admin.display(boolean=True, description='有音频')
+    def has_audio(self, obj):
+        return bool(obj.audio_path)
+
+    def has_delete_permission(self, request, obj=None):
+        """下架走 rejected，保留审稿痕迹。"""
+        return False
+
+    def save_model(self, request, obj, form, change):
+        """人审改正文/音频稿时，旧音频立即失效并升版本。"""
+        if change and any(
+            field in form.changed_data for field in ('body', 'audio_script')
+        ):
+            obj.version += 1
+            obj.audio_path = ''
+        super().save_model(request, obj, form, change)
+
+    def _review(self, request, queryset, decision):
+        pending = list(queryset.filter(status='pending'))
+        reviewer = request.user.get_username()
+        with transaction.atomic():
+            for content in pending:
+                content.status = 'approved' if decision == 'approve' else 'rejected'
+                content.reviewed_by = reviewer
+                content.save(update_fields=['status', 'reviewed_by', 'updated_at'])
+        label = '采纳' if decision == 'approve' else '驳回'
+        self.message_user(
+            request, f'已{label} {len(pending)} 篇深度稿。', messages.SUCCESS,
+        )
+        skipped = queryset.count() - len(pending)
+        if skipped:
+            self.message_user(
+                request, f'{skipped} 篇不是“待人审”状态，已跳过。',
+                messages.WARNING,
+            )
+
+    @admin.action(description='批量采纳深度稿（待人审 → 已发布）')
+    def approve_selected(self, request, queryset):
+        self._review(request, queryset, 'approve')
+
+    @admin.action(description='批量驳回深度稿（待人审 → 已驳回）')
+    def reject_selected(self, request, queryset):
+        self._review(request, queryset, 'reject')
+
+
+@admin.register(DeepContentLog)
+class DeepContentLogAdmin(admin.ModelAdmin):
+    """V2 深度稿事件日志（只读）。"""
+
+    list_display = [
+        'id', 'spot_id', 'category', 'event', 'content', 'latency_ms',
+        'created_at',
+    ]
+    list_filter = ['event', 'category']
+    search_fields = ['spot_id', 'content__title']
+    ordering = ['-created_at']
+    readonly_fields = [
+        'spot_id', 'content', 'category', 'event', 'latency_ms', 'created_at',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

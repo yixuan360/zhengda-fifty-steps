@@ -103,3 +103,88 @@ class NarrativeLog(models.Model):
 
     def __str__(self):
         return f'#{self.spot_id}/{self.dimension}/L{self.depth}'
+
+
+class DeepContent(models.Model):
+    """一篇按“景点 × 分类”组织的深度稿（V2 比赛版）。
+
+    与 KnowledgeItem 独立：DeepContent 是人工审过的成稿，运行时只读，
+    不再经过 LLM 重组；旧事实卡片与旧叙事链路保持原样。
+    """
+
+    CATEGORIES = [
+        ('architecture', '建筑'),
+        ('history', '历史'),
+        ('academy', '学科'),
+        ('nature', '自然'),
+        ('activity', '活动'),
+    ]
+    STATUSES = [
+        ('draft', '草稿'),
+        ('pending', '待人审'),
+        ('approved', '已发布'),
+        ('rejected', '已驳回'),
+    ]
+
+    spot = models.ForeignKey(
+        'spots.Spot', on_delete=models.CASCADE, related_name='deep_contents',
+        verbose_name='景点',
+    )
+    category = models.CharField('分类', max_length=20, choices=CATEGORIES)
+    title = models.CharField('标题', max_length=120)
+    body = models.TextField('正文（600~800 字）')
+    beats = models.JSONField('内容节拍', default=list, blank=True)
+    sources = models.JSONField('来源', default=list, blank=True)
+    fact_notes = models.JSONField('事实核对备注', default=list, blank=True)
+    audio_script = models.TextField('音频稿', blank=True)
+    audio_path = models.CharField('音频路径', max_length=255, blank=True)
+    status = models.CharField(
+        '状态', max_length=20, choices=STATUSES, default='pending',
+    )
+    version = models.PositiveIntegerField('版本', default=1)
+    review_note = models.TextField('审阅备注', blank=True)
+    created_by = models.CharField(
+        '创建者', max_length=10, choices=[('ai', 'AI'), ('human', '人工')],
+        default='ai',
+    )
+    reviewed_by = models.CharField('审核人', max_length=150, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '深度稿'
+        verbose_name_plural = '深度稿'
+        unique_together = [('spot', 'category')]
+        indexes = [models.Index(fields=['spot', 'category', 'status'])]
+
+    def __str__(self):
+        return f'[{self.spot_id}/{self.category}] {self.title[:30]}'
+
+
+class DeepContentLog(models.Model):
+    """V2 深度稿的查看/播放/降级日志，供比赛演示与统计。"""
+
+    EVENTS = [
+        ('view', '查看'),
+        ('play', '播放'),
+        ('complete', '播完'),
+        ('fallback', '降级'),
+    ]
+
+    spot_id = models.IntegerField('景点 id')
+    content = models.ForeignKey(
+        DeepContent, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='logs', verbose_name='深度稿',
+    )
+    category = models.CharField('分类', max_length=20, blank=True)
+    event = models.CharField('事件', max_length=20, choices=EVENTS)
+    latency_ms = models.IntegerField('耗时（毫秒）', default=0)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '深度稿日志'
+        verbose_name_plural = '深度稿日志'
+        indexes = [models.Index(fields=['spot_id', 'category', 'event'])]
+
+    def __str__(self):
+        return f'#{self.spot_id}/{self.category}/{self.event}'
