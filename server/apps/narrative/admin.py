@@ -5,8 +5,14 @@
 - ReviewTask：只读人审留痕
 - NarrativeLog：只读生成日志，供人工观察 fallback / 校验 / 延迟
 """
+from datetime import timedelta
+
 from django.contrib import admin, messages
 from django.db import transaction
+from django.db.models import Avg, Count, Q
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.utils import timezone
 
 from .models import KnowledgeItem, NarrativeLog, ReviewTask
 
@@ -102,6 +108,7 @@ class ReviewTaskAdmin(admin.ModelAdmin):
 
 @admin.register(NarrativeLog)
 class NarrativeLogAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/narrative/narrative_log_change_list.html'
     list_display = [
         'id', 'spot_id', 'dimension', 'depth', 'fallback',
         'validation_passed', 'latency_ms', 'created_at',
@@ -123,3 +130,55 @@ class NarrativeLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    # ── 只读统计页（T7）──────────────────────────────────
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                'stats/',
+                self.admin_site.admin_view(self.stats_view),
+                name='narrative_narrativelog_stats',
+            ),
+        ]
+        return custom + urls
+
+    def stats_view(self, request):
+        """按 spot / dimension 聚合生成次数、fallback 率、平均延迟与近 7 天趋势。"""
+        since = timezone.now() - timedelta(days=7)
+
+        rows = (
+            NarrativeLog.objects
+            .values('spot_id', 'dimension')
+            .annotate(
+                total=Count('id'),
+                fallbacks=Count('id', filter=Q(fallback=True)),
+                avg_latency=Avg('latency_ms'),
+                recent_total=Count('id', filter=Q(created_at__gte=since)),
+                recent_fallbacks=Count(
+                    'id', filter=Q(created_at__gte=since, fallback=True),
+                ),
+            )
+            .order_by('spot_id', 'dimension')
+        )
+
+        stats = []
+        for row in rows:
+            total = row['total'] or 0
+            stats.append({
+                **row,
+                'fallback_rate': row['fallbacks'] / total * 100 if total else 0,
+                'avg_latency': row['avg_latency'] or 0,
+            })
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': '叙事生成统计',
+            'opts': self.model._meta,
+            'stats': stats,
+            'since': since,
+        }
+        return TemplateResponse(
+            request, 'admin/narrative/narrative_stats.html', context,
+        )

@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+  <p>按景点与维度聚合；近 7 天自 {{ since|date:"Y-m-d H:i" }} 起。只读，不写库。</p>
+
+  {% if stats %}
+  <table class="adminlist" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left;">景点 id</th>
+        <th style="text-align:left;">维度</th>
+        <th style="text-align:right;">生成次数</th>
+        <th style="text-align:right;">fallback 次数</th>
+        <th style="text-align:right;">fallback 率</th>
+        <th style="text-align:right;">平均延迟 (ms)</th>
+        <th style="text-align:right;">近 7 天次数</th>
+        <th style="text-align:right;">近 7 天 fallback</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in stats %}
+      <tr>
+        <td>{{ row.spot_id }}</td>
+        <td>{{ row.dimension }}</td>
+        <td style="text-align:right;">{{ row.total }}</td>
+        <td style="text-align:right;">{{ row.fallbacks }}</td>
+        <td style="text-align:right;">{{ row.fallback_rate|floatformat:1 }}%</td>
+        <td style="text-align:right;">{{ row.avg_latency|floatformat:0 }}</td>
+        <td style="text-align:right;">{{ row.recent_total }}</td>
+        <td style="text-align:right;">{{ row.recent_fallbacks }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>暂无生成日志。</p>
+  {% endif %}
+</div>
+{% endblock %}
