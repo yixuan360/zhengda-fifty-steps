@@ -293,6 +293,28 @@ class RouteAdminTest(TestCase):
         self.assertEqual(narrative.status, 'pending')
         self.assertEqual(narrative.reviewed_by, '')
 
+    def test_edit_transition_orders_requeues_review(self):
+        route = self._make_route(status='approved')
+        narrative = RouteNarrative.objects.create(
+            route=route, key='t1', kind='transition',
+            from_order=1, to_order=2, text='过渡', status='approved',
+        )
+        narrative.audio_path = '/media/old.mp3'
+        narrative.save(update_fields=['audio_path'])
+
+        request = RequestFactory().get('/')
+        request.user = self.admin_user
+        form = type('FakeForm', (), {'changed_data': ['from_order']})()
+        RouteNarrativeAdmin(RouteNarrative, admin.site).save_model(
+            request, narrative, form, change=True,
+        )
+
+        narrative.refresh_from_db()
+        self.assertEqual(narrative.version, 2)
+        self.assertEqual(narrative.audio_path, '')
+        self.assertEqual(narrative.status, 'pending')
+        self.assertEqual(narrative.reviewed_by, '')
+
     def test_delete_is_forbidden(self):
         route = self._make_route()
         self.admin_client.post(ADMIN_ROUTES, {
@@ -523,6 +545,20 @@ class LoadRoutesCommandTest(TestCase):
     def test_overlong_note_raises(self):
         payload = self._payload()
         payload[0]['stops'][0]['note'] = 'x' * 161
+        path = self._write(payload)
+        with self.assertRaises(CommandError):
+            call_command('load_routes', path=path)
+
+    def test_zero_total_minutes_raises(self):
+        payload = self._payload()
+        payload[0]['total_minutes'] = 0
+        path = self._write(payload)
+        with self.assertRaises(CommandError):
+            call_command('load_routes', path=path)
+
+    def test_walking_km_above_agent_limit_raises(self):
+        payload = self._payload()
+        payload[0]['walking_km'] = 101
         path = self._write(payload)
         with self.assertRaises(CommandError):
             call_command('load_routes', path=path)

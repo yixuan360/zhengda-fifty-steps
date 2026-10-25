@@ -109,6 +109,13 @@ export default function RootLayout() {
             headerStyle: { backgroundColor: '#F2F4F6' }, headerTintColor: '#1A7A5A',
           }}
         />
+        <Stack.Screen
+          name="route/walk"
+          options={{
+            headerShown: true, title: '带我走', headerBackTitle: '返回',
+            headerStyle: { backgroundColor: '#F2F4F6' }, headerTintColor: '#1A7A5A',
+          }}
+        />
       </Stack>
       <TriggerCard />
       <AppToast />

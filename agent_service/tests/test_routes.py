@@ -480,6 +480,26 @@ def test_more_skips_planned_optional_to_later_one():
     assert result['stops'] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
+def test_more_adds_optional_before_already_planned_later_stop():
+    stops = [
+        {
+            'order': order, 'spot_id': 200 + order, 'category': 'history',
+            'duration_seconds': 60, 'optional': order == 8,
+            'indoor': False, 'note': f'站{order}',
+        }
+        for order in range(1, 10)
+    ]
+    catalog = [{
+        'code': 'gap', 'name': '间隔线', 'subtitle': '', 'theme': '',
+        'total_minutes': 30, 'walking_km': 1.0, 'stops': stops,
+    }]
+    result = routes.adapt_route(
+        'gap', 7, 'more', catalog=catalog,
+        current_stops=[1, 2, 3, 4, 5, 6, 7, 9],
+    )
+    assert result['stops'] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+
 def test_more_offers_deep_dive_when_route_is_full():
     result = adapt(route_code='axis-3', current_order=3, action='more')
     assert result['stops'] == [1, 2, 3]

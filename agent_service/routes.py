@@ -360,15 +360,15 @@ def _base_orders(route, current_order, current_stops, include_future=False):
 
 
 def _extend_through(route, base_orders, target_order):
-    """保留已选站，并补齐到 target 之间的连续站序。"""
+    """补齐 min(base) 到 max(base, target) 的连续站序。"""
     base = set(base_orders)
     if not base:
         return [target_order]
-    upper = max(base)
+    lower = min(base)
+    upper = max(max(base), target_order)
     return [
         stop['order'] for stop in route['stops']
-        if stop['order'] in base
-        or (upper < stop['order'] <= target_order)
+        if lower <= stop['order'] <= upper
     ]
 
 

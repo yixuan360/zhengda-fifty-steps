@@ -303,3 +303,11 @@ def test_narrative_endpoint_never_500s(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()['fallback'] is True
+
+
+def test_narrative_endpoint_rate_limited(monkeypatch):
+    monkeypatch.setattr(main.NEXT_LIMITER, 'allow', lambda key: False)
+
+    response = TestClient(main.app).post('/narrative/next', json=REQUEST)
+
+    assert response.status_code == 429

@@ -412,8 +412,11 @@ class RouteNarrativeAdmin(admin.ModelAdmin):
         return False
 
     def save_model(self, request, obj, form, change):
+        review_fields = (
+            'key', 'kind', 'from_order', 'to_order', 'text', 'audio_script',
+        )
         if change and any(
-            field in form.changed_data for field in ('text', 'audio_script')
+            field in form.changed_data for field in review_fields
         ):
             obj.version += 1
             obj.audio_path = ''

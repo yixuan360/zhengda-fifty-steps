@@ -306,13 +306,14 @@ class Command(BaseCommand):
             raise CommandError(
                 f'第 {index + 1} 条 total_minutes/walking_km 非法'
             ) from exc
-        if total_minutes < 0 or walking_km < 0:
+        if total_minutes < 1 or walking_km < 0:
             raise CommandError(
-                f'第 {index + 1} 条 total_minutes/walking_km 不能为负'
+                f'第 {index + 1} 条 total_minutes 必须大于 0，walking_km 不能为负'
             )
-        if total_minutes > 32767:
+        # 与 Agent route_catalog 的范围保持一致，避免导入成功却被 Agent 跳过
+        if total_minutes > 600:
             raise CommandError(f'第 {index + 1} 条 total_minutes 超出范围')
-        if walking_km > 999.99:
+        if walking_km > 100:
             raise CommandError(f'第 {index + 1} 条 walking_km 超出范围')
 
         return {

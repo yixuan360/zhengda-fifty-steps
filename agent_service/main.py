@@ -58,27 +58,8 @@ def healthz():
     return {'ok': True}
 
 
-@app.post('/narrative/next', response_model=NarrativeResponse)
-def narrative_next(payload: NarrativeRequest, response: Response):
-    started = time.perf_counter()
-    try:
-        result = generate_narrative(
-            spot_id=payload.spot_id,
-            dimension=payload.dimension,
-            current_depth=payload.current_depth,
-            listened_fact_ids=payload.listened_fact_ids,
-            max_seconds=payload.max_seconds,
-        )
-    except Exception:
-        logger.exception('叙事生成出现未捕获异常，按降级返回')
-        result = fallback_response()
-
-    elapsed_ms = int((time.perf_counter() - started) * 1000)
-    response.headers['X-Narrative-Latency-Ms'] = str(elapsed_ms)
-    return NarrativeResponse(**result)
-
-
 # 路线规划会触发一次 LLM 解释，限额比调整接口更严。
+NEXT_LIMITER = RateLimiter(limit=20, window_seconds=60)
 PLAN_LIMITER = RateLimiter(limit=10, window_seconds=60)
 ADAPT_LIMITER = RateLimiter(limit=30, window_seconds=60)
 
@@ -106,8 +87,38 @@ def _adapt_guard(request: Request):
         )
 
 
+def _next_guard(request: Request):
+    if not NEXT_LIMITER.allow(_client_key(request)):
+        raise HTTPException(
+            status_code=429, detail='讲解生成请求过于频繁，请稍后再试',
+        )
+
+
 def _route_llm_enabled():
     return (os.environ.get('NARRATIVE_ROUTE_LLM_EXPLAIN') or '1') != '0'
+
+
+@app.post(
+    '/narrative/next', response_model=NarrativeResponse,
+    dependencies=[Depends(_next_guard)],
+)
+def narrative_next(payload: NarrativeRequest, response: Response):
+    started = time.perf_counter()
+    try:
+        result = generate_narrative(
+            spot_id=payload.spot_id,
+            dimension=payload.dimension,
+            current_depth=payload.current_depth,
+            listened_fact_ids=payload.listened_fact_ids,
+            max_seconds=payload.max_seconds,
+        )
+    except Exception:
+        logger.exception('叙事生成出现未捕获异常，按降级返回')
+        result = fallback_response()
+
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    response.headers['X-Narrative-Latency-Ms'] = str(elapsed_ms)
+    return NarrativeResponse(**result)
 
 
 def _route_error(status_code, message):
