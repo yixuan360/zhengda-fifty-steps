@@ -34,24 +34,28 @@ def _build_client():
     ), model
 
 
-def generate(system_prompt, user_prompt):
-    """调用 chat.completions，返回纯文本；网络错误重试 1 次。"""
+def generate(system_prompt, user_prompt, timeout=TIMEOUT_SECONDS,
+             max_tokens=None, attempts=2):
+    """调用 chat.completions，返回纯文本；网络错误最多尝试 attempts 次。
+
+    timeout / max_tokens / attempts 供路线解释等短任务覆盖默认值。
+    """
     client, model = _build_client()
     messages = [
         {'role': 'system', 'content': system_prompt},
         {'role': 'user', 'content': user_prompt},
     ]
+    options = {'model': model, 'messages': messages, 'timeout': timeout}
+    if max_tokens:
+        options['max_tokens'] = max_tokens
 
-    for attempt in range(2):
+    attempts = max(1, attempts)
+    for attempt in range(attempts):
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                timeout=TIMEOUT_SECONDS,
-            )
+            response = client.chat.completions.create(**options)
             return response.choices[0].message.content or ''
         except APIConnectionError:
-            if attempt == 1:
+            if attempt == attempts - 1:
                 raise
 
     return ''

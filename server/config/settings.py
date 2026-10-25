@@ -150,6 +150,9 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
     ),
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
+    # nginx 用 $proxy_add_x_forwarded_for 追加真实客户端地址；
+    # 取 XFF 最后一段，避免客户端伪造 XFF 绕过限流。
+    'NUM_PROXIES': 1,
 }
 
 # ── SimpleJWT 配置 ───────────────────────────────────

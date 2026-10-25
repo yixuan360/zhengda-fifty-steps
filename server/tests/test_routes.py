@@ -181,6 +181,10 @@ class RouteApiTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(RouteLog.objects.count(), 0)
 
+    def test_num_proxies_configured_for_nginx(self):
+        from rest_framework.settings import api_settings
+        self.assertEqual(api_settings.NUM_PROXIES, 1)
+
     def test_route_log_invalid_fields_return_400(self):
         cases = [
             {
@@ -454,6 +458,53 @@ class LoadRoutesCommandTest(TestCase):
         self.assertEqual(narrative.status, 'rejected')
         self.assertEqual(narrative.reviewed_by, 'reviewer')
 
+    def test_changed_rejected_narrative_goes_back_to_pending(self):
+        path = self._write(self._payload())
+        call_command('load_routes', path=path, approve=True)
+        narrative = RouteNarrative.objects.get(
+            route__code='meihu-test', key='t1',
+        )
+        narrative.status = 'rejected'
+        narrative.reviewed_by = 'reviewer'
+        narrative.save(update_fields=['status', 'reviewed_by'])
+
+        payload = self._payload()
+        payload[0]['narratives'][1]['text'] = '过渡改稿'
+        path = self._write(payload)
+        call_command('load_routes', path=path, approve=True)
+
+        narrative.refresh_from_db()
+        self.assertEqual(narrative.status, 'pending')
+        self.assertEqual(narrative.reviewed_by, '')
+        self.assertEqual(narrative.text, '过渡改稿')
+
+    def test_force_does_not_republish_rejected_route(self):
+        path = self._write(self._payload())
+        call_command('load_routes', path=path, approve=True)
+        route = Route.objects.get(code='meihu-test')
+        route.status = 'rejected'
+        route.reviewed_by = 'reviewer'
+        route.save(update_fields=['status', 'reviewed_by'])
+
+        call_command('load_routes', path=path, approve=True, force=True)
+
+        route.refresh_from_db()
+        self.assertEqual(route.status, 'pending')
+        self.assertEqual(route.reviewed_by, '')
+
+    def test_missing_narratives_key_does_not_delete_existing(self):
+        path = self._write(self._payload())
+        call_command('load_routes', path=path, approve=True)
+        before = RouteNarrative.objects.count()
+
+        payload = self._payload()
+        payload[0].pop('narratives')
+        path = self._write(payload)
+        with self.assertRaises(CommandError):
+            call_command('load_routes', path=path, approve=True)
+
+        self.assertEqual(RouteNarrative.objects.count(), before)
+
     def test_duplicate_route_code_raises(self):
         payload = self._payload()
         payload.append(dict(payload[0]))
@@ -539,7 +590,7 @@ class GenerateRouteAudioCommandTest(TestCase):
         with tempfile.TemporaryDirectory() as media_root:
             target = (
                 Path(media_root) / 'audio' / 'narrative' / 'routes'
-                / f'{self.route.code}_outro_v1.mp3'
+                / f'{self.route.id}_outro_v1.mp3'
             )
             target.parent.mkdir(parents=True)
             target.write_bytes(b'x')

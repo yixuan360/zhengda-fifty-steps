@@ -119,14 +119,22 @@ class Command(BaseCommand):
                         skipped += 1
                     continue
 
+                was_rejected = route.status == 'rejected'
                 for field in ROUTE_FIELDS:
                     setattr(route, field, row[field])
                 route.version += 1
-                route.status = desired_status
-                route.reviewed_by = 'import' if options['approve'] else ''
+                if was_rejected:
+                    # 已驳回内容改稿后回到待审，不能借 --approve/--force 复活。
+                    route.status = 'pending'
+                    route.reviewed_by = ''
+                else:
+                    route.status = desired_status
+                    route.reviewed_by = 'import' if options['approve'] else ''
                 route.save()
                 self._replace_children(
-                    route, row, desired_status, force=options['force'],
+                    route, row,
+                    'pending' if was_rejected else desired_status,
+                    force=options['force'],
                 )
                 updated += 1
 
@@ -166,8 +174,15 @@ class Command(BaseCommand):
                     setattr(narrative, field, data[field])
                 narrative.version += 1
                 narrative.audio_path = ''
-                narrative.status = status
-                narrative.reviewed_by = 'import' if status == 'approved' else ''
+                if narrative.status == 'rejected':
+                    # 已驳回文案改稿后回到待审，不自动重新发布。
+                    narrative.status = 'pending'
+                    narrative.reviewed_by = ''
+                else:
+                    narrative.status = status
+                    narrative.reviewed_by = (
+                        'import' if status == 'approved' else ''
+                    )
                 narrative.save()
             elif status == 'approved' and narrative.status == 'pending':
                 narrative.status = 'approved'
@@ -245,7 +260,11 @@ class Command(BaseCommand):
         stops = row.get('stops')
         if not isinstance(stops, list) or not stops:
             raise CommandError(f'第 {index + 1} 条 stops 必须是非空数组')
-        narratives = row.get('narratives') or []
+        if 'narratives' not in row:
+            raise CommandError(
+                f'第 {index + 1} 条缺少 narratives（显式写 [] 才能清空）'
+            )
+        narratives = row['narratives']
         if not isinstance(narratives, list):
             raise CommandError(f'第 {index + 1} 条 narratives 必须是数组')
 
