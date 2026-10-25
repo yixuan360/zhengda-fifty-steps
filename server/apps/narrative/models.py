@@ -188,3 +188,136 @@ class DeepContentLog(models.Model):
 
     def __str__(self):
         return f'#{self.spot_id}/{self.category}/{self.event}'
+
+
+class Route(models.Model):
+    """V3 — 一条可演示的校园叙事路线（如眉湖八景、中轴三章）。"""
+
+    STATUSES = DeepContent.STATUSES
+
+    code = models.CharField('路线 code', max_length=40, unique=True)
+    name = models.CharField('路线名', max_length=80)
+    subtitle = models.CharField('副标题', max_length=160, blank=True)
+    theme = models.CharField('主题', max_length=80, blank=True)
+    total_minutes = models.PositiveSmallIntegerField('总时长（分钟）', default=0)
+    walking_km = models.DecimalField(
+        '步行距离（km）', max_digits=5, decimal_places=2, default=0,
+    )
+    status = models.CharField(
+        '状态', max_length=20, choices=STATUSES, default='pending',
+    )
+    version = models.PositiveIntegerField('版本', default=1)
+    review_note = models.TextField('审阅备注', blank=True)
+    reviewed_by = models.CharField('审核人', max_length=150, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '路线'
+        verbose_name_plural = '路线'
+        ordering = ['code']
+
+    def __str__(self):
+        return f'{self.code} {self.name}'
+
+
+class RouteStop(models.Model):
+    """路线中的一个站点；optional 表示时间不够时可删。"""
+
+    route = models.ForeignKey(
+        Route, on_delete=models.CASCADE, related_name='stops',
+        verbose_name='路线',
+    )
+    spot = models.ForeignKey(
+        'spots.Spot', on_delete=models.CASCADE, related_name='route_stops',
+        verbose_name='景点',
+    )
+    order = models.PositiveSmallIntegerField('顺序')
+    category = models.CharField(
+        '深度稿分类', max_length=20, choices=DeepContent.CATEGORIES,
+        blank=True, default='',
+    )
+    duration_seconds = models.PositiveSmallIntegerField('建议时长（秒）', default=90)
+    optional = models.BooleanField('可选站', default=False)
+    indoor = models.BooleanField('室内/可避雨', default=False)
+    note = models.CharField('备注', max_length=160, blank=True)
+
+    class Meta:
+        verbose_name = '路线站点'
+        verbose_name_plural = '路线站点'
+        unique_together = [('route', 'order')]
+        ordering = ['route', 'order']
+
+    def __str__(self):
+        return f'{self.route.code}#{self.order} {self.spot_id}'
+
+
+class RouteNarrative(models.Model):
+    """路线级文案：开场、站点间过渡、收尾。"""
+
+    KINDS = [
+        ('intro', '开场'),
+        ('transition', '过渡'),
+        ('outro', '收尾'),
+    ]
+    STATUSES = DeepContent.STATUSES
+
+    route = models.ForeignKey(
+        Route, on_delete=models.CASCADE, related_name='narratives',
+        verbose_name='路线',
+    )
+    key = models.CharField('内容 key', max_length=40)
+    kind = models.CharField('类型', max_length=20, choices=KINDS)
+    from_order = models.PositiveSmallIntegerField('起始站序', null=True, blank=True)
+    to_order = models.PositiveSmallIntegerField('到达站序', null=True, blank=True)
+    text = models.TextField('文字稿')
+    audio_script = models.TextField('音频稿', blank=True)
+    audio_path = models.CharField('音频路径', max_length=255, blank=True)
+    sources = models.JSONField('来源', default=list, blank=True)
+    fact_notes = models.JSONField('事实核对备注', default=list, blank=True)
+    status = models.CharField(
+        '状态', max_length=20, choices=STATUSES, default='pending',
+    )
+    version = models.PositiveIntegerField('版本', default=1)
+    review_note = models.TextField('审阅备注', blank=True)
+    reviewed_by = models.CharField('审核人', max_length=150, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '路线文案'
+        verbose_name_plural = '路线文案'
+        unique_together = [('route', 'key')]
+        ordering = ['route', 'key']
+
+    def __str__(self):
+        return f'{self.route.code}/{self.key}'
+
+
+class RouteLog(models.Model):
+    """V3 路线事件：规划、开始、调整、完成、降级。"""
+
+    EVENTS = [
+        ('plan', '规划'),
+        ('view', '查看'),
+        ('start', '开始'),
+        ('stop', '停止'),
+        ('complete', '完成'),
+        ('adapt', '调整'),
+        ('fallback', '降级'),
+    ]
+
+    route_code = models.CharField('路线 code', max_length=40)
+    event = models.CharField('事件', max_length=20, choices=EVENTS)
+    spot_id = models.IntegerField('当前景点 id', null=True, blank=True)
+    payload = models.JSONField('请求参数', default=dict, blank=True)
+    latency_ms = models.IntegerField('耗时（毫秒）', default=0)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '路线日志'
+        verbose_name_plural = '路线日志'
+        indexes = [models.Index(fields=['route_code', 'event'])]
+
+    def __str__(self):
+        return f'{self.route_code}/{self.event}'

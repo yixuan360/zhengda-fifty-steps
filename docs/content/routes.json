@@ -1,0 +1,146 @@
+[
+  {
+    "code": "meihu-8",
+    "name": "眉湖八景",
+    "subtitle": "从河源到凤台荷香，一条湖岸的中原文明简史",
+    "theme": "水脉线",
+    "total_minutes": 35,
+    "walking_km": 0.9,
+    "stops": [
+      {"order": 1, "spot_id": 6, "category": "history", "duration_seconds": 90, "optional": false, "indoor": false, "note": "河源"},
+      {"order": 2, "spot_id": 7, "category": "history", "duration_seconds": 75, "optional": false, "indoor": false, "note": "问鼎"},
+      {"order": 3, "spot_id": 8, "category": "history", "duration_seconds": 75, "optional": false, "indoor": false, "note": "博弈"},
+      {"order": 4, "spot_id": 9, "category": "history", "duration_seconds": 75, "optional": false, "indoor": false, "note": "禅趣"},
+      {"order": 5, "spot_id": 11, "category": "history", "duration_seconds": 90, "optional": false, "indoor": false, "note": "观星测影"},
+      {"order": 6, "spot_id": 12, "category": "history", "duration_seconds": 75, "optional": false, "indoor": false, "note": "大道通衢"},
+      {"order": 7, "spot_id": 13, "category": "history", "duration_seconds": 75, "optional": false, "indoor": false, "note": "凤台荷香"},
+      {"order": 8, "spot_id": 14, "category": "", "duration_seconds": 90, "optional": true, "indoor": false, "note": "杏坛槐林（可选延伸，深度稿后置）"}
+    ],
+    "narratives": [
+      {
+        "key": "intro",
+        "kind": "intro",
+        "text": "眉湖不是一池普通的水。它的南端叫河源，北端叫凤台荷香；从南到北，八景沿着水岸排开，讲的是郑州从大河文明、商代青铜、楚汉、禅宗、天文、铁路到园林的故事。今天走其中七站，从一滴水开始。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t1",
+        "kind": "transition",
+        "from_order": 1,
+        "to_order": 2,
+        "text": "河源讲的是水，问鼎讲的是青铜。水带来了文明，青铜把文明铸成了礼器。从涌泉池往北走，下一站，是一只商代方鼎。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t2",
+        "kind": "transition",
+        "from_order": 2,
+        "to_order": 3,
+        "text": "鼎是权力的象征，棋是智慧的较量。青铜之后，郑州人开始用另一种方式“争”。前面那盘没有下完的棋，叫“达者为先”。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t3",
+        "kind": "transition",
+        "from_order": 3,
+        "to_order": 4,
+        "text": "刚才的棋盘还在讲输赢；再往前走，水声会慢慢盖过棋子声。禅趣讲的是另一种胜负——先把自己安静下来，才看得见过河的船。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t4",
+        "kind": "transition",
+        "from_order": 4,
+        "to_order": 5,
+        "text": "心静下来，才看得见天。从“渡人”的舟亭，到“测天”的石圭；从内心的澄明，到头顶的星空。下一站，古人把目光抬高了。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t5",
+        "kind": "transition",
+        "from_order": 5,
+        "to_order": 6,
+        "text": "古人测天，近代通地。从观星台的石圭，到郑州的铁路；从仰望星空，到连接四方。脚下的路，要从天上回到地面了。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t6",
+        "kind": "transition",
+        "from_order": 6,
+        "to_order": 7,
+        "text": "钢铁之后，是荷香。郑州的“通”，最后落在了一池荷花上。水脉线走到这里，该慢下来了。前面就是凤台荷香。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t7",
+        "kind": "transition",
+        "from_order": 7,
+        "to_order": 8,
+        "text": "荷香之后，往北再走一段，是杏坛槐林。那里有一片讲坛和槐树，讲的是另一条线：教育如何一代代传下去。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "outro",
+        "kind": "outro",
+        "text": "从河源的一滴水，到凤台荷香的一池荷；如果还有时间，往北再走一段，是杏坛槐林。郑州的古代文明、商代青铜、楚汉、禅宗、天文、铁路和园林，沿着眉湖排成了一条线。",
+        "sources": [],
+        "fact_notes": []
+      }
+    ]
+  },
+  {
+    "code": "axis-3",
+    "name": "中轴三章",
+    "subtitle": "从南门到钟楼，一所大学的空间秩序",
+    "theme": "入门线",
+    "total_minutes": 22,
+    "walking_km": 0.96,
+    "stops": [
+      {"order": 1, "spot_id": 1, "category": "", "duration_seconds": 90, "optional": false, "indoor": false, "note": "南大门"},
+      {"order": 2, "spot_id": 3, "category": "", "duration_seconds": 90, "optional": false, "indoor": false, "note": "综合中心大楼（行政楼）"},
+      {"order": 3, "spot_id": 16, "category": "architecture", "duration_seconds": 120, "optional": false, "indoor": false, "note": "钟楼"}
+    ],
+    "narratives": [
+      {
+        "key": "intro",
+        "kind": "intro",
+        "text": "从南门进校，沿中轴往北，经过综合中心，最后到钟楼。三站，讲的是入口、治理和时间。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t1",
+        "kind": "transition",
+        "from_order": 1,
+        "to_order": 2,
+        "text": "南门是入口，综合中心是秩序。从校门到行政中枢，先看一所大学怎么把人迎进来。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "t2",
+        "kind": "transition",
+        "from_order": 2,
+        "to_order": 3,
+        "text": "从治理到时间。行政楼讲的是秩序，钟楼讲的是这所大学共同的时间。",
+        "sources": [],
+        "fact_notes": []
+      },
+      {
+        "key": "outro",
+        "kind": "outro",
+        "text": "三站走完：入口、治理、时间。如果还有时间，可以去图书馆和计算机学院，看另一条线。",
+        "sources": [],
+        "fact_notes": []
+      }
+    ]
+  }
+]

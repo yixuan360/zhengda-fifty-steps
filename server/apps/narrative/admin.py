@@ -20,6 +20,10 @@ from .models import (
     KnowledgeItem,
     NarrativeLog,
     ReviewTask,
+    Route,
+    RouteLog,
+    RouteNarrative,
+    RouteStop,
 )
 
 
@@ -265,6 +269,200 @@ class DeepContentLogAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
     readonly_fields = [
         'spot_id', 'content', 'category', 'event', 'latency_ms', 'created_at',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RouteStopInline(admin.TabularInline):
+    """站点由 load_routes 导入，Admin 只读，避免绕过路线审核。"""
+
+    model = RouteStop
+    extra = 0
+    fields = [
+        'order', 'spot', 'category', 'duration_seconds',
+        'optional', 'indoor', 'note',
+    ]
+    readonly_fields = fields
+    ordering = ['order']
+    raw_id_fields = ['spot']
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Route)
+class RouteAdmin(admin.ModelAdmin):
+    """V3 路线人审：路线元数据 + 站点内联。"""
+
+    list_display = [
+        'id', 'code', 'name', 'theme', 'total_minutes', 'walking_km',
+        'stops_count', 'status', 'version', 'updated_at',
+    ]
+    list_display_links = ['id', 'code', 'name']
+    list_filter = ['status', 'theme']
+    search_fields = ['code', 'name', 'subtitle']
+    ordering = ['code']
+    inlines = [RouteStopInline]
+    readonly_fields = ['version', 'reviewed_by', 'created_at', 'updated_at']
+    actions = ['approve_selected', 'reject_selected']
+
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request)
+            .annotate(stops_count_annotated=Count('stops'))
+        )
+
+    @admin.display(description='站点数', ordering='stops_count_annotated')
+    def stops_count(self, obj):
+        return getattr(obj, 'stops_count_annotated', obj.stops.count())
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def _review(self, request, queryset, decision):
+        pending = list(queryset.filter(status='pending'))
+        reviewer = request.user.get_username()
+        narrative_status = 'approved' if decision == 'approve' else 'rejected'
+        with transaction.atomic():
+            for route in pending:
+                route.status = narrative_status
+                route.reviewed_by = reviewer
+                route.save(update_fields=['status', 'reviewed_by', 'updated_at'])
+                route.narratives.filter(status='pending').update(
+                    status=narrative_status, reviewed_by=reviewer,
+                )
+        label = '采纳' if decision == 'approve' else '驳回'
+        self.message_user(
+            request, f'已{label} {len(pending)} 条路线。', messages.SUCCESS,
+        )
+        skipped = queryset.count() - len(pending)
+        if skipped:
+            self.message_user(
+                request, f'{skipped} 条不是“待人审”状态，已跳过。',
+                messages.WARNING,
+            )
+
+    @admin.action(description='批量采纳路线（待人审 → 已发布）')
+    def approve_selected(self, request, queryset):
+        self._review(request, queryset, 'approve')
+
+    @admin.action(description='批量驳回路线（待人审 → 已驳回）')
+    def reject_selected(self, request, queryset):
+        self._review(request, queryset, 'reject')
+
+
+@admin.register(RouteStop)
+class RouteStopAdmin(admin.ModelAdmin):
+    """路线站点只读；修改走 load_routes 导入，保持可审计。"""
+
+    list_display = [
+        'id', 'route', 'order', 'spot', 'category',
+        'duration_seconds', 'optional', 'indoor',
+    ]
+    list_filter = ['route', 'optional', 'indoor', 'category']
+    search_fields = ['route__code', 'spot__name']
+    ordering = ['route', 'order']
+    raw_id_fields = ['spot']
+    readonly_fields = [
+        'route', 'order', 'spot', 'category', 'duration_seconds',
+        'optional', 'indoor', 'note',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RouteNarrative)
+class RouteNarrativeAdmin(admin.ModelAdmin):
+    """V3 路线文案人审：开场/过渡/收尾。"""
+
+    list_display = [
+        'id', 'route', 'key', 'kind', 'from_order', 'to_order',
+        'status', 'version', 'has_audio', 'updated_at',
+    ]
+    list_display_links = ['id', 'key']
+    list_filter = ['status', 'kind', 'route']
+    search_fields = ['route__code', 'key', 'text']
+    ordering = ['route', 'key']
+    readonly_fields = [
+        'version', 'audio_path', 'reviewed_by', 'created_at', 'updated_at',
+    ]
+    actions = ['approve_selected', 'reject_selected']
+
+    @admin.display(boolean=True, description='有音频')
+    def has_audio(self, obj):
+        return bool(obj.audio_path)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        if change and any(
+            field in form.changed_data for field in ('text', 'audio_script')
+        ):
+            obj.version += 1
+            obj.audio_path = ''
+            # 已发布文案被改动后回到待人审，不能带着旧审核直接上线。
+            if obj.status == 'approved':
+                obj.status = 'pending'
+                obj.reviewed_by = ''
+        super().save_model(request, obj, form, change)
+
+    def _review(self, request, queryset, decision):
+        pending = list(queryset.filter(status='pending'))
+        reviewer = request.user.get_username()
+        with transaction.atomic():
+            for narrative in pending:
+                narrative.status = 'approved' if decision == 'approve' else 'rejected'
+                narrative.reviewed_by = reviewer
+                narrative.save(update_fields=[
+                    'status', 'reviewed_by', 'updated_at',
+                ])
+        label = '采纳' if decision == 'approve' else '驳回'
+        self.message_user(
+            request, f'已{label} {len(pending)} 条路线文案。', messages.SUCCESS,
+        )
+        skipped = queryset.count() - len(pending)
+        if skipped:
+            self.message_user(
+                request, f'{skipped} 条不是“待人审”状态，已跳过。',
+                messages.WARNING,
+            )
+
+    @admin.action(description='批量采纳路线文案（待人审 → 已发布）')
+    def approve_selected(self, request, queryset):
+        self._review(request, queryset, 'approve')
+
+    @admin.action(description='批量驳回路线文案（待人审 → 已驳回）')
+    def reject_selected(self, request, queryset):
+        self._review(request, queryset, 'reject')
+
+
+@admin.register(RouteLog)
+class RouteLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'route_code', 'event', 'spot_id', 'latency_ms', 'created_at',
+    ]
+    list_filter = ['event', 'route_code']
+    search_fields = ['route_code']
+    ordering = ['-created_at']
+    readonly_fields = [
+        'route_code', 'event', 'spot_id', 'payload', 'latency_ms', 'created_at',
     ]
 
     def has_add_permission(self, request):

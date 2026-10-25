@@ -1,5 +1,5 @@
 """文脉叙事引擎 — T5 记账 API、T5.5 维度覆盖查询与 V2 深度稿 API"""
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from rest_framework import status
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
@@ -8,13 +8,23 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
-from .models import DeepContent, DeepContentLog, KnowledgeItem
+from .models import (
+    DeepContent,
+    DeepContentLog,
+    KnowledgeItem,
+    Route,
+    RouteLog,
+    RouteNarrative,
+)
 from .serializers import (
     DeepContentLogSerializer,
     DeepContentQuerySerializer,
     DeepContentSerializer,
     DimensionQuerySerializer,
     NarrativeLogSerializer,
+    RouteDetailSerializer,
+    RouteLogSerializer,
+    RouteSummarySerializer,
     SpotQuerySerializer,
 )
 
@@ -165,6 +175,85 @@ class DeepContentLogCreateView(APIView):
 
     def post(self, request):
         serializer = DeepContentLogSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {'ok': True, 'data': serializer.data, 'message': ''},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class RouteLogThrottle(AnonRateThrottle):
+    """60 次/分钟/IP；路线事件包含规划/开始/调整/完成。"""
+
+    scope = 'route_log'
+    rate = '60/min'
+
+
+class RouteListView(APIView):
+    """GET /api/v2/narrative/routes/ — 已发布路线目录。"""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    renderer_classes = [JSONRenderer]
+
+    def get(self, request):
+        routes = (
+            Route.objects
+            .filter(status='approved')
+            .prefetch_related('stops')
+            .order_by('code')
+        )
+        return Response({
+            'ok': True,
+            'data': RouteSummarySerializer(routes, many=True).data,
+            'message': '',
+        })
+
+
+class RouteDetailView(APIView):
+    """GET /api/v2/narrative/routes/<code>/ — 站点与已审路线文案。"""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    renderer_classes = [JSONRenderer]
+
+    def get(self, request, code):
+        route = (
+            Route.objects
+            .filter(code=code, status='approved')
+            .prefetch_related(
+                'stops',
+                Prefetch(
+                    'narratives',
+                    queryset=RouteNarrative.objects.filter(status='approved'),
+                ),
+            )
+            .first()
+        )
+        if route is None:
+            return Response(
+                {'ok': False, 'data': None, 'message': '路线暂未上线'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response({
+            'ok': True,
+            'data': RouteDetailSerializer(route).data,
+            'message': '',
+        })
+
+
+class RouteLogCreateView(APIView):
+    """POST /api/v2/narrative/routes/log/ — 路线事件日志。"""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser]
+    renderer_classes = [JSONRenderer]
+    throttle_classes = [RouteLogThrottle]
+
+    def post(self, request):
+        serializer = RouteLogSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(

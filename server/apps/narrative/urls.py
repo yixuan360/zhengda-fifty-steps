@@ -7,6 +7,9 @@ from .views import (
     NarrativeCategoriesView,
     NarrativeDimensionsView,
     NarrativeLogCreateView,
+    RouteDetailView,
+    RouteListView,
+    RouteLogCreateView,
 )
 
 urlpatterns = [
@@ -30,5 +33,18 @@ urlpatterns = [
     path(
         'narrative/deep/', DeepContentDetailView.as_view(),
         name='narrative-deep',
+    ),
+    # V3 比赛版：路线叙事
+    path(
+        'narrative/routes/', RouteListView.as_view(),
+        name='narrative-routes',
+    ),
+    path(
+        'narrative/routes/log/', RouteLogCreateView.as_view(),
+        name='narrative-routes-log',
+    ),
+    path(
+        'narrative/routes/<str:code>/', RouteDetailView.as_view(),
+        name='narrative-route-detail',
     ),
 ]

@@ -1,7 +1,18 @@
 """文脉叙事引擎 — DRF 序列化器"""
+import json
+
 from rest_framework import serializers
 
-from .models import DeepContent, DeepContentLog, KnowledgeItem, NarrativeLog
+from .models import (
+    DeepContent,
+    DeepContentLog,
+    KnowledgeItem,
+    NarrativeLog,
+    Route,
+    RouteLog,
+    RouteNarrative,
+    RouteStop,
+)
 
 VALID_DIMENSIONS = {key for key, _ in KnowledgeItem.DIMENSIONS}
 VALID_CATEGORIES = {key for key, _ in DeepContent.CATEGORIES}
@@ -102,3 +113,92 @@ class DeepContentLogSerializer(serializers.ModelSerializer):
         if content_id:
             content = DeepContent.objects.filter(id=content_id).first()
         return DeepContentLog.objects.create(content=content, **validated_data)
+
+
+class RouteStopSerializer(serializers.ModelSerializer):
+    spot_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = RouteStop
+        fields = [
+            'order', 'spot_id', 'category', 'duration_seconds',
+            'optional', 'indoor', 'note',
+        ]
+
+
+class RouteNarrativeSerializer(serializers.ModelSerializer):
+    audio_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RouteNarrative
+        fields = [
+            'key', 'kind', 'from_order', 'to_order', 'text',
+            'audio_url', 'sources', 'fact_notes', 'version', 'updated_at',
+        ]
+
+    def get_audio_url(self, obj):
+        return obj.audio_path or None
+
+
+class RouteSummarySerializer(serializers.ModelSerializer):
+    walking_km = serializers.FloatField()
+    stops_count = serializers.SerializerMethodField()
+    optional_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Route
+        fields = [
+            'code', 'name', 'subtitle', 'theme',
+            'total_minutes', 'walking_km', 'stops_count', 'optional_count',
+        ]
+
+    def get_stops_count(self, obj):
+        return len(list(obj.stops.all()))
+
+    def get_optional_count(self, obj):
+        return sum(1 for stop in obj.stops.all() if stop.optional)
+
+
+class RouteDetailSerializer(serializers.ModelSerializer):
+    walking_km = serializers.FloatField()
+    stops = RouteStopSerializer(many=True, read_only=True)
+    narratives = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Route
+        fields = [
+            'code', 'name', 'subtitle', 'theme',
+            'total_minutes', 'walking_km', 'stops', 'narratives',
+        ]
+
+    def get_narratives(self, obj):
+        narratives = [
+            item for item in obj.narratives.all()
+            if item.status == 'approved'
+        ]
+        narratives.sort(key=lambda item: (
+            0 if item.kind == 'intro' else 2 if item.kind == 'outro' else 1,
+            item.from_order or 0,
+            item.key,
+        ))
+        return RouteNarrativeSerializer(narratives, many=True).data
+
+
+class RouteLogSerializer(serializers.ModelSerializer):
+    route_code = serializers.CharField(max_length=40, allow_blank=False)
+    spot_id = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1,
+    )
+    payload = serializers.DictField(required=False, default=dict)
+    latency_ms = serializers.IntegerField(
+        required=False, default=0, min_value=0,
+    )
+
+    class Meta:
+        model = RouteLog
+        fields = ['route_code', 'event', 'spot_id', 'payload', 'latency_ms']
+
+    def validate_payload(self, value):
+        if len(json.dumps(value, ensure_ascii=False).encode('utf-8')) > 4096:
+            raise serializers.ValidationError('payload 过大')
+        return value
