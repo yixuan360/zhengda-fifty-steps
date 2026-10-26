@@ -1,0 +1,23 @@
+# 郑大五十步 V3 staging — Agent
+# 安装：cp 到 /etc/systemd/system/zhengda-v3-agent.service
+# 端口 8101 只监听本机，由 nginx /agent/ 转发。
+
+[Unit]
+Description=郑大五十步 V3 staging Agent
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/opt/zhengda-v3
+EnvironmentFile=/opt/zhengda-v3/agent.env
+ExecStart=/opt/zhengda-v3/server/venv/bin/uvicorn \
+    agent_service.main:app \
+    --host 127.0.0.1 \
+    --port 8101 \
+    --log-level warning
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
