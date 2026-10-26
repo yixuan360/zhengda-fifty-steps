@@ -57,6 +57,21 @@
         "EXPO_PUBLIC_ENABLE_DEBUG": "true"
       }
     },
+    "narrative-v3-staging": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "narrative-v3-staging",
+      "env": {
+        "EXPO_PUBLIC_AMAP_ANDROID_KEY": "e7171cce2b78edd39bbd690b0be83ab3",
+        "EXPO_PUBLIC_API_BASE_URL": "http://123.57.94.91",
+        "EXPO_PUBLIC_AGENT_BASE_URL": "http://123.57.94.91/agent",
+        "EXPO_PUBLIC_NARRATIVE_ENABLED": "false",
+        "EXPO_PUBLIC_NARRATIVE_V2_ENABLED": "true",
+        "EXPO_PUBLIC_NARRATIVE_ROUTE_ENABLED": "true",
+        "EXPO_PUBLIC_ENABLE_DEBUG": "true"
+      }
+    },
     "production": {
       "android": {
         "buildType": "apk"
