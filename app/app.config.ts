@@ -12,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: '郑大五十步',
   slug: 'zhengda-fifty-steps',
   owner: 'abc123098',
-  version: '1.0.0',
+  version: '3.0.0',
   extra: {
     eas: {
       projectId: '1896ff8f-f0d8-40e0-a72e-ed8f7a12c1a2',
