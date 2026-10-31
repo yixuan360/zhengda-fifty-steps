@@ -48,6 +48,9 @@ mystyle_sdk_*.zip
 .DS_Store
 Thumbs.db
 
+# 本地数据库备份与同步导出（含敏感数据，不入库）
+backups/
+
 # 媒体文件（可选，大文件可以不同步）
 server/media/*
 !server/media/.gitkeep
