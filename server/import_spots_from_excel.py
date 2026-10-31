@@ -1,5 +1,9 @@
 """
-从 信息汇总.xlsx "主要地点" sheet 批量导入景点
+历史数据导入脚本：从 信息汇总.xlsx "主要地点" sheet 批量导入景点
+
+注意：原始 Excel 已于 2026-10-31 移出仓库；下方 SPOTS 为当时提取的硬编码快照，
+仅作历史参考。现行数据以 Django DB 为唯一真源，请勿再用本脚本覆盖线上数据。
+
 运行：python import_spots_from_excel.py
 """
 import os, sys, django
